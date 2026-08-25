@@ -1,0 +1,81 @@
+name: TerraVid Mobile E2E Tests (Maestro)
+
+on:
+  workflow_dispatch: # Permite ejecución manual desde la pestaña Actions en GitHub
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'src/**'
+      - '.maestro/**'
+      - 'package.json'
+  schedule:
+    # Ejecución programada nocturna diaria (03:00 UTC)
+    - cron: '0 3 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-android:
+    name: Maestro E2E on Android Emulator
+    runs-on: macos-13 # macos runners poseen aceleración de hardware nativa (HAXM/Hypervisor) para emuladores
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Run E2E Tests on Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-audio -no-boot-anim
+          script: |
+            # 1. Generar proyecto nativo Android desde Expo
+            npx expo prebuild --platform android --clean
+            
+            # 2. Compilar APK de Debug
+            cd android && ./gradlew assembleDebug --no-daemon && cd ..
+            
+            # 3. Instalar la APK en el emulador Android activo
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            
+            # 4. Iniciar Metro Bundler en segundo plano para Expo
+            npx expo start --no-dev --minify &
+            
+            # 5. Ejecutar la suite completa de flujos Maestro
+            maestro test .maestro/ --format junit --output e2e-report.xml
+
+      - name: Upload E2E Test Report & Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-e2e-report
+          path: |
+            e2e-report.xml
+            ~/.maestro/tests/

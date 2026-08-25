@@ -171,24 +171,21 @@ La suite E2E de interfaz de usuario en dispositivos y emuladores reales está im
 | **03. Pesaje Vendimia** | [`.maestro/03-pesaje-vendimia.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/03-pesaje-vendimia.yaml) | Selección de cuadrilla y cuartel, ingreso de kg (HU-24) y verificación de impacto en el resumen. |
 | **04. Sync Offline** | [`.maestro/04-offline-sync.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/04-offline-sync.yaml) | Activación de modo avión, creación de labor offline, desactivación de modo avión y auto-sincronización $\le 5$s. |
 
-### Prerrequisito: Instalación de Maestro CLI
-Dado que Maestro es un ejecutable a nivel de sistema operativo para interactuar con emuladores/dispositivos:
+### Ejecución en CI/CD (GitHub Actions)
+Las pruebas E2E están completamente automatizadas en el pipeline [`.github/workflows/e2e-mobile.yml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.github/workflows/e2e-mobile.yml):
+- **Triggers**: En cada Pull Request con cambios en `src/` o `.maestro/`, ejecución manual (`workflow_dispatch`) o regresión nocturna programada (`cron: '0 3 * * *'`).
+- **Entorno**: Levanta un emulador Android (Pixel 6, API 33) con aceleración por hardware en la nube.
+- **Reportes**: Sube el reporte JUnit XML (`e2e-report.xml`) y capturas de pantalla si hay fallas.
 
-- **Windows (PowerShell)**:
-  ```powershell
-  powershell -Command "Invoke-WebRequest -Uri https://get.maestro.mobile.dev -UseBasicParsing | Invoke-Expression"
-  ```
-- **macOS / Linux / WSL**:
-  ```bash
-  curl -Ls "https://get.maestro.mobile.dev" | bash
-  ```
-
-### Ejecución de Pruebas E2E:
-1. Iniciar el emulador Android o conectar el dispositivo físico (`adb devices`).
-2. Ejecutar los flujos:
-```bash
-npm run test:e2e
-```
+### Ejecución Local en tu Máquina:
+1. **Instalación de Maestro CLI** (ejecutable de sistema para interactuar con `adb`):
+   - **Windows (PowerShell 7+ / WSL)**: `curl -Ls "https://get.maestro.mobile.dev" | bash`
+   - **macOS / Linux**: `curl -Ls "https://get.maestro.mobile.dev" | bash`
+2. **Iniciar emulador o conectar dispositivo**: `adb devices`
+3. **Ejecutar los flujos**:
+   ```bash
+   npm run test:e2e
+   ```
 
 ---
 
