@@ -1,0 +1,44 @@
+appId: com.terravid.mobile
+tags:
+  - offline
+  - sync
+---
+# Flujo E2E 04: Simulación de pérdida de red y sincronización automática (HU-14)
+- launchApp
+
+# Simular activación de modo avión (sin red)
+- setAirplaneMode: true
+
+# Verificar que aparece el banner de Modo Offline
+- assertVisible: "Sin conexión a internet"
+- assertVisible: "Modo Offline"
+
+# Cargar una labor offline
+- tapOn: "Labores"
+- tapOn:
+    id: "fab-nueva-labor"
+- tapOn: "Seleccionar Finca..."
+- tapOn: "Finca Tupungato"
+- tapOn: "Seleccionar Cuartel..."
+- tapOn: "Cuartel Malbec 01"
+- tapOn: "Seleccionar Tipo de Labor..."
+- tapOn: "Poda de Invierno"
+- tapOn:
+    id: "input-cantidad"
+- inputText: "50"
+- tapOn: "Guardar Labor"
+
+# Verificar badge con 1 registro pendiente
+- assertVisible: "1 pendiente — Tocar para sincronizar"
+
+# Simular recuperación de conectividad (desactivar modo avión)
+- setAirplaneMode: false
+
+# Esperar ≤ 5s para sincronización reactiva en segundo plano
+- extendedWaitUntil:
+    visible: "Sincronizando 1 de 1 registros..."
+    timeout: 6000
+
+# Verificar estado final completamente sincronizado
+- assertNotVisible: "1 pendiente — Tocar para sincronizar"
+- assertNotVisible: "Modo Offline"

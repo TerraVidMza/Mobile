@@ -11,7 +11,8 @@
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:smoke": "expo export --platform web --clear"
+    "test:smoke": "expo export --platform web --clear",
+    "test:e2e": "maestro test .maestro/"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",

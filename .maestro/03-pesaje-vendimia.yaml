@@ -1,0 +1,35 @@
+appId: com.terravid.mobile
+tags:
+  - vendimia
+  - pesajes
+---
+# Flujo E2E 03: Registro de pesaje diario de vendimia (HU-24, HU-27)
+- launchApp
+
+# Navegar a la pestaña Pesajes
+- tapOn: "Pesaje"
+- assertVisible: "Vendimia"
+
+# Abrir formulario de nuevo pesaje
+- tapOn:
+    id: "fab-nuevo-pesaje"
+- assertVisible: "Nuevo Pesaje de Vendimia"
+
+# Seleccionar Cuadrilla y Cuartel
+- tapOn: "Seleccionar Cuadrilla..."
+- tapOn: "Cuadrilla Los Andes"
+
+- tapOn: "Seleccionar Cuartel..."
+- tapOn: "Cuartel Malbec 01"
+
+# Ingresar peso en kilogramos
+- tapOn:
+    id: "input-peso-kg"
+- inputText: "1250"
+
+# Guardar pesaje
+- tapOn: "Guardar Pesaje"
+
+# Verificar que impactó en el resumen diario acumulado de la cuadrilla
+- assertVisible: "Cuadrilla Los Andes"
+- assertVisible: "1250 kg"

@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate:
-    name: Typecheck & Tests
+    name: Typecheck, Tests & Smoke Validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,11 +23,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: TypeScript Check
+      - name: TypeScript Strict Check
         run: npx tsc --noEmit
 
-      - name: Run Jest Unit Tests
-        run: npm test
+      - name: Run Jest Test Suites with Coverage
+        run: npm test -- --coverage --coverageReporters=text-summary --coverageReporters=lcov
+
+      - name: Publish Coverage to Step Summary
+        if: always()
+        run: |
+          echo "### 📊 Resumen de Cobertura de Pruebas" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          npx jest --coverage --coverageReporters=text-summary | grep -A 10 "Coverage summary" >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Web Production Smoke Test
+        run: npm run test:smoke
+        env:
+          EXPO_PUBLIC_API_BASE_URL: 'https://api.terravid.com/api'
 
   build-web:
     name: Build Web Production Bundle

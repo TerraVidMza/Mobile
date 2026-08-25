@@ -1,0 +1,51 @@
+appId: com.terravid.mobile
+tags:
+  - labores
+  - offline
+---
+# Flujo E2E 02: Registro de labor en campo con selección de insumos (HU-12, HU-13)
+- launchApp
+
+# Navegar a la pestaña Labores
+- tapOn: "Labores"
+- assertVisible: "Labores del Día"
+
+# Abrir formulario de nueva labor
+- tapOn:
+    id: "fab-nueva-labor"
+- assertVisible: "Nueva Labor"
+
+# Seleccionar Finca y Cuartel
+- tapOn: "Seleccionar Finca..."
+- tapOn: "Finca Tupungato"
+
+- tapOn: "Seleccionar Cuartel..."
+- tapOn: "Cuartel Malbec 01"
+
+# Seleccionar Tipo de Labor e ingresar cantidad
+- tapOn: "Seleccionar Tipo de Labor..."
+- tapOn: "Poda de Invierno"
+
+- tapOn:
+    id: "input-cantidad"
+- inputText: "150"
+
+# Agregar Insumo utilizado (HU-13)
+- tapOn: "Seleccionar insumo..."
+- tapOn: "Pasta Cicatrizante (kg)"
+
+- tapOn:
+    id: "input-insumo-cantidad"
+- inputText: "5"
+
+- tapOn: "+"
+- assertVisible: "Pasta Cicatrizante (kg)"
+- assertVisible: "Cantidad: 5"
+
+# Guardar labor localmente en SQLite
+- tapOn: "Guardar Labor"
+
+# Verificar retorno al listado y presencia de la tarjeta creada
+- assertVisible: "Poda de Invierno"
+- assertVisible: "Cuartel Malbec 01"
+- assertVisible: "150 plantas"

@@ -148,35 +148,41 @@ graph LR
 ```
 
 ### Pasos ejecutados actualmente en CI:
-1. **`validate`**:
-   - `npm ci` (instalación limpia de dependencias).
-   - `npx tsc --noEmit` (verificación de tipos TypeScript estricta).
-   - `npm test` (**ejecuta automáticamente las 23 suites y 100 pruebas**).
+1. **`validate`** (ejecutado en cada `push` y `pull_request` a `main` y `develop`):
+   - `npm ci`: Instalación limpia de dependencias.
+   - `npx tsc --noEmit`: Verificación estricta de tipos de TypeScript (0 errores).
+   - `npm test -- --coverage`: **Ejecuta automáticamente las 24 suites y 104 pruebas** con generación de lcov y text-summary.
+   - **Publicación en Step Summary**: Publica el reporte de cobertura directamente en el panel de GitHub Actions (`$GITHUB_STEP_SUMMARY`).
+   - **Web Production Smoke Test**: Ejecuta `npm run test:smoke` para garantizar que la exportación web no tiene assets rotos ni fallas de empaquetado.
 2. **`build-web`** (solo en push a `main` tras aprobar `validate`):
    - `npx expo export --platform web` (compilación del bundle minificado para producción).
    - Publicación del artefacto `dist/`.
 
 ---
 
-## 🚀 5. Pruebas y Mejoras Propuestas para Nuevos Cambios
+## 📱 5. Pruebas End-to-End (E2E) con Maestro
 
-A medida que el proyecto evolucione, se recomienda incorporar las siguientes automatizaciones adicionales en el flujo de CI/CD:
+La suite E2E de interfaz de usuario en dispositivos y emuladores reales está implementada bajo la carpeta [`.maestro/`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro):
 
-### 1. Reporte de Cobertura Automatizado en Pull Requests
-Agregar un step en CI para publicar el resumen de cobertura en el comentario del PR:
-```yaml
-- name: Test Coverage Summary
-  run: npm test -- --coverage --coverageReporters=text-summary --coverageReporters=lcov
+| Flujo | Archivo | Descripción |
+|---|---|---|
+| **01. Login** | [`.maestro/01-login.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/01-login.yaml) | Inicio de sesión con credenciales de Capataz y validación de redirección a las pestañas principales. |
+| **02. Registrar Labor** | [`.maestro/02-registrar-labor.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/02-registrar-labor.yaml) | Carga de labor en campo, selección interactiva de insumos (HU-13) y verificación en el listado diario. |
+| **03. Pesaje Vendimia** | [`.maestro/03-pesaje-vendimia.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/03-pesaje-vendimia.yaml) | Selección de cuadrilla y cuartel, ingreso de kg (HU-24) y verificación de impacto en el resumen. |
+| **04. Sync Offline** | [`.maestro/04-offline-sync.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/04-offline-sync.yaml) | Activación de modo avión, creación de labor offline, desactivación de modo avión y auto-sincronización $\le 5$s. |
+
+### Ejecución de Pruebas E2E:
+```bash
+# Ejecutar todos los flujos E2E en emulador conectado (Android / iOS)
+npm run test:e2e
 ```
 
-### 2. Smoke Test de Producción en CI para Pull Requests
-Ejecutar `npm run test:smoke` dentro del job `validate` para garantizar que ningún cambio rompa la compilación antes de fusionar a `main` o `develop`.
+---
 
-### 3. Pruebas End-to-End (E2E) con Maestro / Detox
-- **Herramienta recomendada**: [Maestro](https://maestro.mobile.dev/) por su simplicidad de sintaxis YAML y compatibilidad directa con Expo.
-- **Flujos a automatizar**:
-  - Login exitoso $\rightarrow$ Registro de labor con 2 insumos $\rightarrow$ Verificación en lista.
-  - Modo avión activado $\rightarrow$ Registro de pesaje $\rightarrow$ Modo avión desactivado $\rightarrow$ Sincronización automática.
+## ♿ 6. Pruebas de Accesibilidad (A11y) y Alto Contraste Solar
 
-### 4. Pruebas de Accesibilidad Automatizadas (A11y)
-Integrar verificadores de contraste y etiquetas accesibles (`aria-label`, `accessibilityLabel`) para cumplir con normativas de inclusión en campo.
+Implementadas en [`src/components/a11y.test.tsx`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/src/components/a11y.test.tsx):
+- Verificación de roles semánticos (`role="progressbar"`, botones táctiles).
+- Validación de tamaños mínimos de toque ($\ge 44 \times 44$ dp) para operarios con guantes en viñedo.
+- Validación de colores con alto contraste solar para uso en exteriores bajo luz solar directa.
+
