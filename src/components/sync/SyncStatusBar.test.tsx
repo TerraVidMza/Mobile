@@ -22,12 +22,14 @@ function getText(node: any): string {
 describe('SyncStatusBar Component (HU-14)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useSyncStore.setState({
-      isConnected: true,
-      status: 'idle',
-      pendingCount: 0,
-      currentIndex: 0,
-      totalToSync: 0,
+    act(() => {
+      useSyncStore.setState({
+        isConnected: true,
+        status: 'idle',
+        pendingCount: 0,
+        currentIndex: 0,
+        totalToSync: 0,
+      });
     });
   });
 
@@ -45,7 +47,9 @@ describe('SyncStatusBar Component (HU-14)', () => {
   });
 
   it('debe mostrar badge de Modo Offline cuando no hay conexión', () => {
-    useSyncStore.setState({ isConnected: false, pendingCount: 3 });
+    act(() => {
+      useSyncStore.setState({ isConnected: false, pendingCount: 3 });
+    });
     let component: any;
     act(() => {
       component = renderer.create(
@@ -60,11 +64,13 @@ describe('SyncStatusBar Component (HU-14)', () => {
   });
 
   it('debe mostrar progreso mientras está sincronizando', () => {
-    useSyncStore.setState({
-      isConnected: true,
-      status: 'syncing',
-      currentIndex: 4,
-      totalToSync: 10,
+    act(() => {
+      useSyncStore.setState({
+        isConnected: true,
+        status: 'syncing',
+        currentIndex: 4,
+        totalToSync: 10,
+      });
     });
 
     let component: any;
@@ -81,10 +87,12 @@ describe('SyncStatusBar Component (HU-14)', () => {
   });
 
   it('debe mostrar botón de pendientes y permitir forzar sincronización manual', async () => {
-    useSyncStore.setState({
-      isConnected: true,
-      status: 'idle',
-      pendingCount: 2,
+    act(() => {
+      useSyncStore.setState({
+        isConnected: true,
+        status: 'idle',
+        pendingCount: 2,
+      });
     });
 
     let component: any;

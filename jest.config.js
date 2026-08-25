@@ -12,6 +12,7 @@ module.exports = {
     '^react-native-vector-icons/(.*)$': '<rootDir>/__mocks__/react-native-vector-icons/MaterialCommunityIcons.js',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   collectCoverageFrom: [
     'src/config/**/*.{ts,tsx}',
     'src/db/**/*.{ts,tsx}',
