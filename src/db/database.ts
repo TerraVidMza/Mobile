@@ -138,7 +138,8 @@ class WebDatabase implements AppDatabase {
     }
 
     // UPDATE
-    const updateMatch = trimmed.match(/UPDATE\s+(\w+)\s+SET\s+([^WHERE]+)(?:\s+WHERE\s+(.+))?/i);
+    const updateMatch = trimmed.match(/UPDATE\s+(\w+)\s+SET\s+(.*?)\s+WHERE\s+(.*)/i)
+      || trimmed.match(/UPDATE\s+(\w+)\s+SET\s+(.*)/i);
     if (updateMatch) {
       const tableName = updateMatch[1];
       const table = this.getTable(tableName);
@@ -161,18 +162,18 @@ class WebDatabase implements AppDatabase {
           }
         } else {
           // markSincronizado / markError
+          const localUuid = params[params.length - 1];
           const estado = params[0];
-          const serverIdOrError = params[1];
-          const localUuid = params[2];
+          const secondParam = params.length > 2 ? params[1] : null;
 
           for (const r of table) {
             if (r.local_uuid === localUuid) {
               r.estado_sync = estado;
               if (trimmed.includes('server_id')) {
-                r.server_id = serverIdOrError;
+                r.server_id = secondParam;
                 r.error_message = null;
               } else if (trimmed.includes('error_message')) {
-                r.error_message = serverIdOrError;
+                r.error_message = secondParam;
               }
               changes++;
             }
@@ -194,18 +195,18 @@ class WebDatabase implements AppDatabase {
             }
           }
         } else {
+          const localUuid = params[params.length - 1];
           const estado = params[0];
-          const serverIdOrError = params[1];
-          const localUuid = params[2];
+          const secondParam = params.length > 2 ? params[1] : null;
 
           for (const p of table) {
             if (p.local_uuid === localUuid) {
               p.estado_sync = estado;
               if (trimmed.includes('server_id')) {
-                p.server_id = serverIdOrError;
+                p.server_id = secondParam;
                 p.error_message = null;
               } else if (trimmed.includes('error_message')) {
-                p.error_message = serverIdOrError;
+                p.error_message = secondParam;
               }
               changes++;
             }
@@ -247,7 +248,7 @@ class WebDatabase implements AppDatabase {
       const estado = params[0];
       return this.getTable('registro_labor').filter((r) => r.estado_sync === estado) as T[];
     }
-    if (/FROM detalle_insumo_labor\s+WHERE labor_local_uuid = \?/i.test(trimmed)) {
+    if (/FROM detalle_insumo_labor/i.test(trimmed)) {
       const uuid = params[0];
       const insumos = this.getTable('insumos');
       const detalles = this.getTable('detalle_insumo_labor').filter((d) => d.labor_local_uuid === uuid);
