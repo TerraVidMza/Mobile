@@ -15,8 +15,19 @@ describe('fecha-local utilities (D-009)', () => {
     expect(hoy).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('timestampLocal devuelve un formato ISO 8601 con offset', () => {
-    const ts = timestampLocal();
-    expect(ts).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+  it('timestampLocal devuelve un formato ISO 8601 con offset positivo y negativo', () => {
+    const origGetTimezoneOffset = Date.prototype.getTimezoneOffset;
+
+    // Offset negativo (ej. GMT+3 -> getTimezoneOffset() = -180)
+    Date.prototype.getTimezoneOffset = () => -180;
+    const tsPos = timestampLocal();
+    expect(tsPos).toMatch(/\+03:00$/);
+
+    // Offset positivo (ej. GMT-3 -> getTimezoneOffset() = 180)
+    Date.prototype.getTimezoneOffset = () => 180;
+    const tsNeg = timestampLocal();
+    expect(tsNeg).toMatch(/-03:00$/);
+
+    Date.prototype.getTimezoneOffset = origGetTimezoneOffset;
   });
 });

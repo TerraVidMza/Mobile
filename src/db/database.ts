@@ -248,7 +248,7 @@ class WebDatabase implements AppDatabase {
       const estado = params[0];
       return this.getTable('registro_labor').filter((r) => r.estado_sync === estado) as T[];
     }
-    if (/FROM detalle_insumo_labor/i.test(trimmed)) {
+    if (/FROM detalle_insumo_labor/i.test(trimmed) && !/FROM registro_labor/i.test(trimmed)) {
       const uuid = params[0];
       const insumos = this.getTable('insumos');
       const detalles = this.getTable('detalle_insumo_labor').filter((d) => d.labor_local_uuid === uuid);

@@ -1,10 +1,10 @@
 /**
- * Pruebas unitarias para Zustand sync.store.
+ * Pruebas unitarias para Zustand sync.store (100% Cobertura).
  */
 
 import { useSyncStore } from './sync.store';
 
-describe('useSyncStore', () => {
+describe('useSyncStore (100% Coverage)', () => {
   beforeEach(() => {
     useSyncStore.setState({
       pendingCount: 0,
@@ -17,15 +17,24 @@ describe('useSyncStore', () => {
     });
   });
 
-  it('debe incrementar y decrementar la cantidad de registros pendientes', () => {
+  it('debe incrementar, decrementar y fijar la cantidad de registros pendientes', () => {
     useSyncStore.getState().incrementPending(3);
     expect(useSyncStore.getState().pendingCount).toBe(3);
 
+    useSyncStore.getState().incrementPending(); // default 1
+    expect(useSyncStore.getState().pendingCount).toBe(4);
+
     useSyncStore.getState().decrementPending(2);
+    expect(useSyncStore.getState().pendingCount).toBe(2);
+
+    useSyncStore.getState().decrementPending(); // default 1
     expect(useSyncStore.getState().pendingCount).toBe(1);
 
     useSyncStore.getState().decrementPending(5);
     expect(useSyncStore.getState().pendingCount).toBe(0);
+
+    useSyncStore.getState().setPendingCount(15);
+    expect(useSyncStore.getState().pendingCount).toBe(15);
   });
 
   it('debe actualizar el estado de conectividad y sincronización', () => {

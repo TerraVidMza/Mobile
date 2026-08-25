@@ -17,7 +17,7 @@ export function initConnectivityMonitor(): () => void {
     return _unsubscribe;
   }
 
-  _unsubscribe = NetInfo.addEventListener((state) => {
+  const netInfoUnsub = NetInfo.addEventListener((state) => {
     const isOnline = Boolean(state.isConnected && state.isInternetReachable !== false);
     const store = useSyncStore.getState();
 
@@ -39,10 +39,10 @@ export function initConnectivityMonitor(): () => void {
   // Chequeo inicial
   syncEngine.updatePendingCount();
 
-  return () => {
-    if (_unsubscribe) {
-      _unsubscribe();
-      _unsubscribe = null;
-    }
+  _unsubscribe = () => {
+    netInfoUnsub();
+    _unsubscribe = null;
   };
+
+  return _unsubscribe;
 }

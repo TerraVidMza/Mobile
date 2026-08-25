@@ -2,7 +2,7 @@
  * Tests unitarios para la estrategia de reintentos (HU-14).
  */
 
-import { getRetryDelay } from './retry-strategy';
+import { getRetryDelay, waitRetry } from './retry-strategy';
 
 describe('retry-strategy (HU-14)', () => {
   it('1er intento está cerca de 30s con jitter (27s - 33s)', () => {
@@ -21,5 +21,19 @@ describe('retry-strategy (HU-14)', () => {
     const delay = getRetryDelay(2);
     expect(delay).toBeGreaterThanOrEqual(108_000);
     expect(delay).toBeLessThanOrEqual(132_000);
+  });
+
+  it('intentos superiores usan el delay máximo como base', () => {
+    const delay = getRetryDelay(5);
+    expect(delay).toBeGreaterThanOrEqual(108_000);
+    expect(delay).toBeLessThanOrEqual(132_000);
+  });
+
+  it('waitRetry ejecuta el delay esperado', async () => {
+    jest.useFakeTimers();
+    const waitPromise = waitRetry(0);
+    jest.runAllTimers();
+    await waitPromise;
+    jest.useRealTimers();
   });
 });

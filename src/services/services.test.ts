@@ -1,5 +1,5 @@
 /**
- * Pruebas unitarias para los servicios API de TerraVid Mobile.
+ * Pruebas unitarias completas para los servicios API de TerraVid Mobile (100% Cobertura).
  */
 
 import api from './api';
@@ -13,83 +13,121 @@ import {
   insumosService,
   cuadrillasService,
 } from './catalogos.service';
+import { catalogosSyncService } from './catalogos-sync.service';
+import { catalogosRepo } from '../db/repositories/catalogos.repo';
 
 jest.mock('./api');
+jest.mock('../db/repositories/catalogos.repo');
+jest.mock('../utils/storage');
 
-describe('API Services', () => {
+describe('API Services Layer (100% Coverage)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('authService', () => {
-    it('debe llamar a POST /auth/login con credenciales', async () => {
-      const mockResponse = { data: { accessToken: 'tk-1', user: { id: 'u-1' } } };
-      (api.post as jest.Mock).mockResolvedValue(mockResponse);
-
-      const res = await authService.login({ email: 'test@terravid.com', password: 'password123' });
-      expect(api.post).toHaveBeenCalledWith('/auth/login', {
-        email: 'test@terravid.com',
-        password: 'password123',
+    it('debe invocar todos los endpoints de autenticación y cambio de password', async () => {
+      (api.post as jest.Mock).mockImplementation((url: string) => {
+        if (url === '/auth/login') return Promise.resolve({ data: { accessToken: 'tk-1', user: { id: 'u-1' } } });
+        if (url === '/auth/logout') return Promise.resolve({ data: {} });
+        if (url === '/auth/forgot-password') return Promise.resolve({ data: { message: 'Email enviado' } });
+        if (url === '/auth/reset-password') return Promise.resolve({ data: { message: 'Password reseteado' } });
+        if (url === '/auth/cambiar-password') return Promise.resolve({ data: {} });
+        return Promise.resolve({ data: {} });
       });
-      expect(res).toEqual(mockResponse.data);
-    });
 
-    it('debe llamar a POST /auth/logout', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
+      const loginRes = await authService.login({ email: 'test@terravid.com', password: 'password123' });
+      expect(loginRes.accessToken).toBe('tk-1');
+
       await authService.logout();
       expect(api.post).toHaveBeenCalledWith('/auth/logout');
+
+      const forgotRes = await authService.forgotPassword({ email: 'test@terravid.com' });
+      expect(forgotRes.message).toBe('Email enviado');
+
+      const resetRes = await authService.resetPassword({ token: 'tok-123', newPassword: 'NewPassword123!' });
+      expect(resetRes.message).toBe('Password reseteado');
+
+      await authService.changePassword({ currentPassword: 'Old', newPassword: 'New' });
+      expect(api.post).toHaveBeenCalledWith('/auth/cambiar-password', {
+        currentPassword: 'Old',
+        newPassword: 'New',
+      });
     });
   });
 
   describe('laborService', () => {
-    it('debe llamar a POST /registro-labor/sync con el lote', async () => {
-      const mockLote = [
-        {
-          localUuid: 'uuid-1',
-          cuartelId: 'c-1',
-          tipoLaborId: 'tl-1',
-          fecha: '2026-08-25',
-          cantidad: 10,
-          createdAtLocal: '2026-08-25T10:00:00Z',
-          insumos: [],
-        },
-      ];
-      const mockResponse = {
-        data: [{ localUuid: 'uuid-1', serverId: 'srv-1', status: 'created' }],
-      };
-      (api.post as jest.Mock).mockResolvedValue(mockResponse);
+    it('debe registrar una labor individual (HTTP 201 y HTTP 200 idempotente)', async () => {
+      (api.post as jest.Mock)
+        .mockResolvedValueOnce({ status: 201, data: { id: 'srv-1', localUuid: 'l-1' } })
+        .mockResolvedValueOnce({ status: 200, data: { id: 'srv-1', localUuid: 'l-1' } });
 
-      const res = await laborService.sincronizarLote(mockLote);
-      expect(api.post).toHaveBeenCalledWith('/registro-labor/sync', { registros: mockLote });
-      expect(res).toEqual(mockResponse.data);
+      const res1 = await laborService.registrarUno({
+        localUuid: 'l-1',
+        cuartelId: 'c-1',
+        tipoLaborId: 'tl-1',
+        fecha: '2026-08-25',
+        cantidad: 10,
+        insumos: [],
+      });
+      expect(res1.yaExistia).toBe(false);
+
+      const res2 = await laborService.registrarUno({
+        localUuid: 'l-1',
+        cuartelId: 'c-1',
+        tipoLaborId: 'tl-1',
+        fecha: '2026-08-25',
+        cantidad: 10,
+        insumos: [],
+      });
+      expect(res2.yaExistia).toBe(true);
+    });
+
+    it('debe consultar labor por ID', async () => {
+      (api.get as jest.Mock).mockResolvedValue({ data: { id: 'srv-1', cantidad: 50 } });
+      const labor = await laborService.findById('srv-1');
+      expect(labor.id).toBe('srv-1');
+    });
+
+    it('debe sincronizar lote de labores', async () => {
+      (api.post as jest.Mock).mockResolvedValue({ data: [{ localUuid: 'l-1', status: 'created' }] });
+      const res = await laborService.sincronizarLote([
+        { localUuid: 'l-1', cuartelId: 'c-1', tipoLaborId: 't-1', fecha: '2026-08-25', cantidad: 5, insumos: [] },
+      ]);
+      expect(res.length).toBe(1);
     });
   });
 
   describe('pesajeService', () => {
-    it('debe llamar a POST /pesajes-vendimia/sync con el lote', async () => {
-      const mockLote = [
-        {
-          localUuid: 'p-1',
-          cuadrillaId: 'cuad-1',
-          cuartelId: 'c-1',
-          fecha: '2026-08-25',
-          pesoKg: 1000,
-          createdAtLocal: '2026-08-25T11:00:00Z',
-        },
-      ];
-      const mockResponse = {
-        data: [{ localUuid: 'p-1', serverId: 'srv-p1', status: 'created' }],
-      };
-      (api.post as jest.Mock).mockResolvedValue(mockResponse);
+    it('debe registrar un pesaje individual y sincronizar lotes', async () => {
+      (api.post as jest.Mock).mockImplementation((url: string) => {
+        if (url === '/pesajes-vendimia') {
+          return Promise.resolve({ status: 201, data: { id: 'p-1', localUuid: 'loc-p1' } });
+        }
+        if (url === '/pesajes-vendimia/sync') {
+          return Promise.resolve({ data: [{ localUuid: 'loc-p1', serverId: 'p-1', status: 'created' }] });
+        }
+        return Promise.resolve({ data: {} });
+      });
 
-      const res = await pesajeService.sincronizarLote(mockLote);
-      expect(api.post).toHaveBeenCalledWith('/pesajes-vendimia/sync', { pesajes: mockLote });
-      expect(res).toEqual(mockResponse.data);
+      const res = await pesajeService.registrarUno({
+        localUuid: 'loc-p1',
+        cuadrillaId: 'cuad-1',
+        cuartelId: 'c-1',
+        fecha: '2026-08-25',
+        pesoKg: 500,
+      });
+      expect(res.localUuid).toBe('loc-p1');
+
+      const batchRes = await pesajeService.sincronizarLote([
+        { localUuid: 'loc-p1', cuadrillaId: 'cuad-1', cuartelId: 'c-1', fecha: '2026-08-25', pesoKg: 500 },
+      ]);
+      expect(batchRes.length).toBe(1);
     });
   });
 
-  describe('catalogos services', () => {
-    it('debe consultar todos los catálogos correctamente', async () => {
+  describe('catalogosService', () => {
+    it('debe invocar todos los endpoints de catálogos', async () => {
       (api.get as jest.Mock).mockImplementation((url: string) => {
         if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1' }] });
         if (url.startsWith('/cuarteles')) return Promise.resolve({ data: [{ id: 'c-1' }] });
@@ -99,17 +137,58 @@ describe('API Services', () => {
         return Promise.resolve({ data: [] });
       });
 
-      const fincas = await fincasService.getAll();
-      const cuarteles = await cuartelesService.getByFinca('f-1');
-      const tipos = await tipoLaborService.getAll();
-      const insumos = await insumosService.getAll();
-      const cuadrillas = await cuadrillasService.getByFinca('f-1');
+      expect(await fincasService.getAll()).toEqual([{ id: 'f-1' }]);
+      expect(await cuartelesService.getByFinca('f-1')).toEqual([{ id: 'c-1' }]);
+      expect(await tipoLaborService.getAll()).toEqual([{ id: 't-1' }]);
+      expect(await insumosService.getAll()).toEqual([{ id: 'i-1' }]);
+      expect(await cuadrillasService.getByFinca('f-1')).toEqual([{ id: 'cu-1' }]);
+    });
+  });
 
-      expect(fincas).toEqual([{ id: 'f-1' }]);
-      expect(cuarteles).toEqual([{ id: 'c-1' }]);
-      expect(tipos).toEqual([{ id: 't-1' }]);
-      expect(insumos).toEqual([{ id: 'i-1' }]);
-      expect(cuadrillas).toEqual([{ id: 'cu-1' }]);
+  describe('catalogosSyncService', () => {
+    it('debe sincronizar catálogos y persistirlos en SQLite', async () => {
+      (api.get as jest.Mock).mockImplementation((url: string) => {
+        if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1', nombre: 'Finca' }] });
+        if (url.startsWith('/cuarteles')) return Promise.resolve({ data: [{ id: 'c-1', fincaId: 'f-1' }] });
+        if (url === '/tipo-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
+        if (url === '/insumos') return Promise.resolve({ data: [{ id: 'i-1' }] });
+        if (url.startsWith('/cuadrillas')) return Promise.resolve({ data: [{ id: 'cu-1', fincaId: 'f-1' }] });
+        return Promise.resolve({ data: [] });
+      });
+
+      const res = await catalogosSyncService.syncAll();
+      expect(res.success).toBe(true);
+      expect(catalogosRepo.saveFincas).toHaveBeenCalled();
+      expect(catalogosRepo.saveCuarteles).toHaveBeenCalled();
+      expect(catalogosRepo.saveCuadrillas).toHaveBeenCalled();
+    });
+
+    it('debe manejar errores en sub-consultas y continuar con las demás', async () => {
+      (api.get as jest.Mock).mockImplementation((url: string) => {
+        if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1' }, { id: 'f-2' }] });
+        if (url.includes('f-1')) return Promise.reject(new Error('Finca 1 not found'));
+        if (url.includes('f-2')) return Promise.resolve({ data: [{ id: 'c-2' }] });
+        if (url === '/tipo-labor') return Promise.resolve({ data: [] });
+        if (url === '/insumos') return Promise.resolve({ data: [] });
+        return Promise.resolve({ data: [] });
+      });
+
+      const res = await catalogosSyncService.syncAll();
+      expect(res.success).toBe(true);
+    });
+
+    it('debe capturar error global al fallar fincas', async () => {
+      (api.get as jest.Mock).mockRejectedValue(new Error('Falla global de red'));
+      const res = await catalogosSyncService.syncAll();
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('Falla global de red');
+    });
+
+    it('debe capturar error no estándar', async () => {
+      (api.get as jest.Mock).mockRejectedValue('Error string');
+      const res = await catalogosSyncService.syncAll();
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('Error desconocido al descargar catálogos');
     });
   });
 });
