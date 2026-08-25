@@ -171,9 +171,22 @@ La suite E2E de interfaz de usuario en dispositivos y emuladores reales está im
 | **03. Pesaje Vendimia** | [`.maestro/03-pesaje-vendimia.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/03-pesaje-vendimia.yaml) | Selección de cuadrilla y cuartel, ingreso de kg (HU-24) y verificación de impacto en el resumen. |
 | **04. Sync Offline** | [`.maestro/04-offline-sync.yaml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.maestro/04-offline-sync.yaml) | Activación de modo avión, creación de labor offline, desactivación de modo avión y auto-sincronización $\le 5$s. |
 
+### Prerrequisito: Instalación de Maestro CLI
+Dado que Maestro es un ejecutable a nivel de sistema operativo para interactuar con emuladores/dispositivos:
+
+- **Windows (PowerShell)**:
+  ```powershell
+  powershell -Command "Invoke-WebRequest -Uri https://get.maestro.mobile.dev -UseBasicParsing | Invoke-Expression"
+  ```
+- **macOS / Linux / WSL**:
+  ```bash
+  curl -Ls "https://get.maestro.mobile.dev" | bash
+  ```
+
 ### Ejecución de Pruebas E2E:
+1. Iniciar el emulador Android o conectar el dispositivo físico (`adb devices`).
+2. Ejecutar los flujos:
 ```bash
-# Ejecutar todos los flujos E2E en emulador conectado (Android / iOS)
 npm run test:e2e
 ```
 
