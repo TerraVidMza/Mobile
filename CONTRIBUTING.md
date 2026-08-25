@@ -1,4 +1,4 @@
-# Guía de Contribución
+# Guía de Contribución — TerraVid Mobile
 
 ## Política de Branching (Gitflow)
 
@@ -25,3 +25,23 @@ Se implementa el flujo de trabajo **Gitflow** para estructurar la colaboración 
 - Toda rama `feature/` o `fix/` parte de `develop` y se integra nuevamente en `develop` (vía Pull Request).
 - Toda rama `hotfix/` parte de `main`, se mergea a `main` para el despliegue urgente y luego se hace back-merge a `develop` para que el fix no se pierda en la siguiente release.
 - El nombre de la rama debe incluir el ID de Jira cuando corresponda (`feature/` y `fix/`), para trazabilidad entre el código y el ticket.
+
+---
+
+## Flujo de Trabajo en Desarrollo Mobile
+
+1. **Instalación de dependencias**:
+   ```bash
+   npm install
+   ```
+2. **Configuración local**:
+   - Crear archivo `.env` a partir de `.env.example`.
+   - Asegurar que la URL del backend (`EXPO_PUBLIC_API_BASE_URL`) sea accesible desde el dispositivo/emulador.
+3. **Verificación de tipos y formato**:
+   ```bash
+   npm run typecheck
+   npm run lint
+   npm test
+   ```
+4. **Desarrollo con SQLite y funcionalidades nativas**:
+   - Debido al uso de `expo-sqlite` y `expo-notifications`, se recomienda ejecutar mediante **Development Builds** (`npx expo run:android` / `npx expo run:ios`) o EAS Build, en lugar de Expo Go estándar.
