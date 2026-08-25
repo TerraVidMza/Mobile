@@ -120,6 +120,31 @@ npm run web
 
 ---
 
+## Pruebas y Cobertura
+
+La aplicación cuenta con una suite integral de 23 test suites y 100 pruebas automatizadas (unitarias, integración, rendimiento y componentes UI).
+
+```bash
+# Ejecutar todas las pruebas
+npm test
+
+# Ejecutar con reporte de cobertura
+npm test -- --coverage
+
+# Ejecutar smoke test de producción web
+npm run test:smoke
+```
+
+Para más detalles sobre la arquitectura de testing, consultar [`TESTING.md`](TESTING.md).
+
+---
+
+## Despliegue y CI/CD
+
+El pipeline de CI/CD en GitHub Actions valida tipos, ejecuta todas las pruebas y genera artefactos de producción web. Para consultar el plan detallado para Android, iOS y Web, ver [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+---
+
 ## Contribuir
 
 Consultar [`CONTRIBUTING.md`](CONTRIBUTING.md) para la política de branching (Gitflow) y convenciones de código.
