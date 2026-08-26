@@ -122,7 +122,7 @@ npm run web
 
 ## Pruebas y Cobertura
 
-La aplicación cuenta con una suite integral de 24 test suites y 104 pruebas automatizadas (unitarias, integración, rendimiento, accesibilidad A11y y componentes UI).
+La aplicación cuenta con una suite integral de 30 test suites y 125 pruebas automatizadas (unitarias, integración, rendimiento, accesibilidad A11y, PWA, georreferenciación GPS, biometría, respaldo local y componentes UI).
 
 ```bash
 # Ejecutar todas las pruebas
