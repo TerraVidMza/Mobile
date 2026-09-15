@@ -8,25 +8,25 @@ Este documento describe la totalidad de las suites de pruebas unitarias, de inte
 
 La estrategia de pruebas de TerraVid Mobile está diseñada con un enfoque **Offline-First**, asegurando que la lógica de negocio, la persistencia local en SQLite, los flujos de seguridad, la interfaz de usuario y los algoritmos de sincronización funcionen de forma robusta e idéntica en **Android**, **iOS** y **Web**.
 
-- **Total de Suites**: **23 suites de pruebas**.
-- **Total de Tests Automatizados**: **100 pruebas** (100% aprobadas).
-- **Cobertura de Código**: **100% de líneas y funciones** en capas de lógica, catálogos, sincronización, base de datos y utilidades.
+- **Total de Suites**: **30 suites de pruebas**.
+- **Total de Tests Automatizados**: **125 pruebas** (100% aprobadas).
+- **Cobertura de Código**: **100% de líneas y funciones** en capas de lógica, catálogos, sincronización, base de datos, utilidades, PWA, georreferenciación y biometría.
 - **Herramientas de Testing**: `Jest`, `ts-jest`, `react-test-renderer`, `react-native-web`.
 
 ---
 
-## 📂 2. Desglose de las 23 Suites de Pruebas Implementadas
+## 📂 2. Desglose de las 30 Suites de Pruebas Implementadas
 
-Las pruebas se organizan modularmente en **6 capas arquitectónicas**:
+Las pruebas se organizan modularmente en **7 capas arquitectónicas**:
 
 ```
 src/
-├── utils/           # Capa 1: Utilidades y validaciones (4 suites)
+├── utils/           # Capa 1: Utilidades, PWA, GPS y Backups (7 suites)
 ├── db/              # Capa 2: Base de datos SQLite y repositorios (3 suites)
-├── services/        # Capa 3: Clientes API e interceptores (3 suites)
-├── stores/          # Capa 4: Gestión de estado Zustand y AuthGate (4 suites)
+├── services/        # Capa 3: Clientes API, Notificaciones y Biometría (4 suites)
+├── stores/          # Capa 4: Gestión de estado Zustand, AuthGate y Temas (5 suites)
 ├── sync/            # Capa 5: Motor Offline-First e integración (6 suites)
-└── components/      # Capa 6: Componentes visuales y formularios UI (3 suites)
+└── components/      # Capa 6: Componentes visuales, UI, A11y y Dashboard KPIs (5 suites)
 ```
 
 ---

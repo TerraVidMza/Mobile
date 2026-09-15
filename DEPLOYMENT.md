@@ -134,145 +134,68 @@ npx expo export --platform web
 
 ### 5.2. Opciones de Hosting para Producción
 
-#### Opción A: Despliegue en Nginx / Docker (Recomendado On-Premise / Servidor Propio)
+#### Opción A: Despliegue en Google Cloud VM + Caddy (Producción Actual — 100% Operativo)
 
-**Dockerfile**:
-```dockerfile
-# Etapa 1: Build
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-ENV NODE_ENV=production
-RUN npx expo export --platform web
+La aplicación Web de producción se encuentra alojada en la máquina virtual de Google Cloud (`terravid`), servida por **Caddy 2 con HTTPS automático y compresión Zstandard / Gzip**:
 
-# Etapa 2: Servidor Nginx liviano
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+- **URL de Producción**: [`https://terravid-mobile.duckdns.org`](https://terravid-mobile.duckdns.org)
+- **Directorio en VM**: `/opt/terravid/mobile/`
+- **Configuración de Caddy** (`/opt/backend/deploy/Caddyfile`):
+  ```caddy
+  terravid-mobile.duckdns.org {
+      root * /srv/mobile
+      file_server
+      try_files {path} /index.html
+      encode zstd gzip
 
-**nginx.conf** (Con soporte para SPA routing de Expo Router):
-```nginx
-server {
-    listen 80;
-    server_name _;
-
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # Compresión Gzip
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript;
-
-    # Soporte para rutas de Expo Router (SPA Fallback)
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache agresivo para assets estáticos con hash
-    location ~* \.(?:ico|css|js|gif|jpe?g|png|woff2?|eot|ttf|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-```
+      header {
+          Strict-Transport-Security "max-age=31536000; includeSubDomains"
+          X-Content-Type-Options "nosniff"
+          X-Frame-Options "SAMEORIGIN"
+          Referrer-Policy "no-referrer"
+          -Server
+      }
+  }
+  ```
 
 ---
 
-#### Opción B: Despliegue en Vercel (Recomendado Serverless / Cloud)
+## 6. Pipeline de Entrega Continua (CD) Automatizado (GitHub Actions)
 
-1. Crear el archivo `vercel.json` en la raíz de `Mobile/`:
-   ```json
-   {
-     "buildCommand": "npx expo export --platform web",
-     "outputDirectory": "dist",
-     "rewrites": [
-       { "source": "/(.*)", "destination": "/index.html" }
-     ]
-   }
-   ```
-2. Ejecutar:
-   ```bash
-   vercel --prod
-   ```
+El workflow [`.github/workflows/deploy-mobile.yml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.github/workflows/deploy-mobile.yml) implementa un pipeline de **3 etapas** que compila, valida y publica automáticamente a la VM de Google Cloud en cada `push` o `merge` a la rama `main`:
+
+```mermaid
+graph TD
+    A[Push o Merge a 'main'] --> B[Job 1: validate]
+    B --> B1[TypeScript Strict Check: tsc --noEmit]
+    B --> B2[Jest Test Suites: 30 suites / 125 tests]
+    B --> B3[Web Production Smoke Test]
+    
+    B -->|100% Aprobado| C[Job 2: build-web]
+    C --> C1[npx expo export --platform web]
+    C --> C2[Upload Artifact: web-dist]
+    
+    C -->|Aprobado| D[Job 3: deploy-gcp]
+    D --> D1[Download Artifact web-dist]
+    D --> D2[SSH / SCP a VM Google Cloud 34.9.190.155]
+    D --> D3[Extract a /opt/terravid/mobile]
+    D --> D4[Restart Caddy Container]
+    D --> D5[Health Check: curl -f https://terravid-mobile.duckdns.org]
+    D --> D6[Publish Step Summary en GitHub Actions]
+```
+
+### Configuración de GitHub Secrets
+
+Para habilitar el despliegue automático por SSH, se configuran los siguientes **Secrets** en el repositorio (`Settings -> Secrets and variables -> Actions`):
+
+| Secret | Descripción | Valor |
+|---|---|---|
+| `GCP_VM_HOST` | IP o dominio de la VM | `34.9.190.155` o `terravid-mobile.duckdns.org` |
+| `GCP_VM_USER` | Usuario SSH en la VM | `SergioFarias` |
+| `GCP_VM_SSH_KEY` | Clave privada SSH (ED25519) | Contenido de `id_ed25519_deploy` |
+| `EXPO_PUBLIC_API_BASE_URL` | Endpoint base de la API REST | `https://terravid-api.duckdns.org/api` |
 
 ---
-
-## 6. Actualizaciones Inmediatas en Caliente (EAS Update / OTA)
-
-Para corregir bugs de JavaScript, lógica de negocio o interfaz sin tener que pasar por la revisión de Google Play o Apple App Store (demoras de 24 a 48 hs):
-
-```bash
-# Publicar actualización inmediata al canal de producción
-eas update --channel production --message "Corrección en cálculo de pesaje y filtro de cuarteles"
-```
-*Los dispositivos de los capataces descargarán la nueva versión de forma transparente al abrir la aplicación.*
-
----
-
-## 7. Pipeline de CI/CD Automatizado (GitHub Actions)
-
-Crea el archivo `.github/workflows/deploy-mobile.yml`:
-
-```yaml
-name: TerraVid Mobile CI/CD
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  validate:
-    name: Typecheck & Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: Mobile/package-lock.json
-
-      - name: Install Dependencies
-        working-directory: Mobile
-        run: npm ci
-
-      - name: TypeScript Check
-        working-directory: Mobile
-        run: npx tsc --noEmit
-
-      - name: Run Unit Tests
-        working-directory: Mobile
-        run: npm test
-
-  build-web:
-    name: Build & Deploy Web
-    needs: validate
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install & Export Web
-        working-directory: Mobile
-        run: |
-          npm ci
-          npx expo export --platform web
-        env:
-          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.PROD_API_BASE_URL }}
-
-      # Aquí se puede conectar con AWS S3, Vercel o Docker Registry
-```
 
 ---
 

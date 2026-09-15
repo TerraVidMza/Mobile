@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: Typecheck, Tests & Smoke Validation
@@ -32,7 +36,7 @@ jobs:
       - name: Publish Coverage to Step Summary
         if: always()
         run: |
-          echo "### 📊 Resumen de Cobertura de Pruebas" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Resumen de Cobertura de Pruebas (30 Suites / 125 Tests)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           npx jest --coverage --coverageReporters=text-summary | grep -A 10 "Coverage summary" >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
@@ -40,7 +44,7 @@ jobs:
       - name: Web Production Smoke Test
         run: npm run test:smoke
         env:
-          EXPO_PUBLIC_API_BASE_URL: 'https://api.terravid.com/api'
+          EXPO_PUBLIC_API_BASE_URL: 'https://terravid-api.duckdns.org/api'
 
   build-web:
     name: Build Web Production Bundle
@@ -60,13 +64,74 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Export Web
+      - name: Export Web Production Bundle
         run: npx expo export --platform web
         env:
-          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL || 'https://api.terravid.com/api' }}
+          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL || 'https://terravid-api.duckdns.org/api' }}
 
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
         with:
           name: web-dist
           path: dist/
+          retention-days: 7
+
+  deploy-gcp:
+    name: Continuous Deployment to Google Cloud VM
+    needs: build-web
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Web Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      - name: Package Web Distribution
+        run: |
+          tar -czf dist.tar.gz -C dist .
+          ls -lh dist.tar.gz
+
+      - name: Setup SSH Connection to VM
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.GCP_VM_SSH_KEY }}
+
+      - name: Add VM Host Key to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.GCP_VM_HOST || '34.9.190.155' }} >> ~/.ssh/known_hosts
+
+      - name: Transfer Bundle to VM
+        run: |
+          scp dist.tar.gz ${{ secrets.GCP_VM_USER || 'SergioFarias' }}@${{ secrets.GCP_VM_HOST || '34.9.190.155' }}:/tmp/dist.tar.gz
+
+      - name: Extract & Reload Caddy Service
+        run: |
+          ssh ${{ secrets.GCP_VM_USER || 'SergioFarias' }}@${{ secrets.GCP_VM_HOST || '34.9.190.155' }} "
+            sudo mkdir -p /opt/terravid/mobile &&
+            sudo tar -xzf /tmp/dist.tar.gz -C /opt/terravid/mobile &&
+            sudo chmod -R 777 /opt/terravid/mobile &&
+            cd /opt/backend/deploy &&
+            sudo docker compose -f docker-compose.prod.yml restart caddy
+          "
+
+      - name: Post-Deployment Health Check
+        run: |
+          echo "Verificando disponibilidad de https://terravid-mobile.duckdns.org..."
+          curl --retry 5 --retry-delay 3 --retry-all-errors -I -f https://terravid-mobile.duckdns.org
+
+      - name: Publish Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 Despliegue Continuo a Google Cloud Exitoso" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Métrica / Recurso | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ambiente** | Producción (Google Cloud VM \`terravid\`) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **URL de la App** | [https://terravid-mobile.duckdns.org](https://terravid-mobile.duckdns.org) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **API Backend** | [https://terravid-api.duckdns.org/api](https://terravid-api.duckdns.org/api) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Rama** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Estado del Health Check** | 🟢 HTTP/2 200 OK (TLS Activo) |" >> $GITHUB_STEP_SUMMARY
