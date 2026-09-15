@@ -9,6 +9,8 @@ import { create } from 'zustand';
 import { secureStorage } from '../utils/storage';
 import { authService } from '../services/auth.service';
 import { registerUnauthorizedCallback } from '../services/api';
+import { catalogosSyncService } from '../services/catalogos-sync.service';
+import { useCatalogosStore } from './catalogos.store';
 import type { AuthUser } from '../types/api.types';
 
 interface AuthState {
@@ -62,6 +64,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         debeCambiarPassword: response.user.debeCambiarPassword,
         loginError: null,
       });
+
+      // El docstring de este store prometía esto desde siempre, pero nada lo
+      // llamaba: `syncEngine.runSync()` solo baja catálogos si antes hubo
+      // labores/pesajes pendientes para subir, así que una sesión nueva sin
+      // nada local (login recién hecho) se quedaba con los selectores de
+      // Finca/Cuartel/Tipo de Labor vacíos hasta el primer pull-to-refresh.
+      // No debe tumbar el login si falla (ej. sin conexión): ya hay sesión.
+      try {
+        await catalogosSyncService.syncAll();
+        await useCatalogosStore.getState().loadFromLocalDb();
+      } catch {
+        // Sin conexión al loguearse: los selectores quedan vacíos hasta el
+        // próximo pull-to-refresh o reconexión, que sí reintentan la sync.
+      }
     } catch (error: unknown) {
       let message = 'Error de conexión. Intentá nuevamente.';
 

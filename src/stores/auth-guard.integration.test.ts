@@ -15,6 +15,12 @@ import { RolNombre } from '../types/api.types';
 
 jest.mock('../services/auth.service');
 jest.mock('../utils/storage');
+jest.mock('../services/catalogos-sync.service', () => ({
+  catalogosSyncService: { syncAll: jest.fn().mockResolvedValue({ success: true }) },
+}));
+jest.mock('./catalogos.store', () => ({
+  useCatalogosStore: { getState: () => ({ loadFromLocalDb: jest.fn().mockResolvedValue(undefined) }) },
+}));
 
 describe('AuthGuard & Session Security Integration Test', () => {
   beforeEach(() => {
