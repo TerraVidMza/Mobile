@@ -128,17 +128,53 @@ describe('API Services Layer (100% Coverage)', () => {
 
   describe('catalogosService', () => {
     it('debe invocar todos los endpoints de catálogos', async () => {
+      // Forma real del backend (ver Backend/src/modules/fincas y /cuarteles):
+      // `hectareas`/`activa` en Finca, `variedad` anidado en Cuartel — no
+      // `superficie`/`activo`/`variedad: string`, que es lo que esta prueba
+      // mockeaba antes y por lo que el bug de mapeo pasó desapercibido.
       (api.get as jest.Mock).mockImplementation((url: string) => {
-        if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1' }] });
-        if (url.startsWith('/cuarteles')) return Promise.resolve({ data: [{ id: 'c-1' }] });
-        if (url === '/tipo-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
+        if (url === '/fincas') {
+          return Promise.resolve({
+            data: [{ id: 'f-1', nombre: 'Finca 1', ubicacion: null, hectareas: '10.00', activa: true }],
+          });
+        }
+        if (url.startsWith('/cuarteles')) {
+          return Promise.resolve({
+            data: [
+              {
+                id: 'c-1',
+                fincaId: 'f-1',
+                nombre: 'Cuartel 1',
+                variedad: { nombre: 'Malbec' },
+                hectareas: '5.00',
+                anioImplantacion: 2020,
+                estado: 'pendiente',
+                activo: true,
+              },
+            ],
+          });
+        }
+        if (url === '/tipos-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
         if (url === '/insumos') return Promise.resolve({ data: [{ id: 'i-1' }] });
         if (url.startsWith('/cuadrillas')) return Promise.resolve({ data: [{ id: 'cu-1' }] });
         return Promise.resolve({ data: [] });
       });
 
-      expect(await fincasService.getAll()).toEqual([{ id: 'f-1' }]);
-      expect(await cuartelesService.getByFinca('f-1')).toEqual([{ id: 'c-1' }]);
+      expect(await fincasService.getAll()).toEqual([
+        { id: 'f-1', nombre: 'Finca 1', ubicacion: null, superficie: 10, activo: true },
+      ]);
+      expect(await cuartelesService.getByFinca('f-1')).toEqual([
+        {
+          id: 'c-1',
+          fincaId: 'f-1',
+          nombre: 'Cuartel 1',
+          variedad: 'Malbec',
+          superficie: 5,
+          anioPlantacion: 2020,
+          estado: 'pendiente',
+          activo: true,
+        },
+      ]);
       expect(await tipoLaborService.getAll()).toEqual([{ id: 't-1' }]);
       expect(await insumosService.getAll()).toEqual([{ id: 'i-1' }]);
       expect(await cuadrillasService.getByFinca('f-1')).toEqual([{ id: 'cu-1' }]);
@@ -150,7 +186,7 @@ describe('API Services Layer (100% Coverage)', () => {
       (api.get as jest.Mock).mockImplementation((url: string) => {
         if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1', nombre: 'Finca' }] });
         if (url.startsWith('/cuarteles')) return Promise.resolve({ data: [{ id: 'c-1', fincaId: 'f-1' }] });
-        if (url === '/tipo-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
+        if (url === '/tipos-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
         if (url === '/insumos') return Promise.resolve({ data: [{ id: 'i-1' }] });
         if (url.startsWith('/cuadrillas')) return Promise.resolve({ data: [{ id: 'cu-1', fincaId: 'f-1' }] });
         return Promise.resolve({ data: [] });
@@ -168,7 +204,7 @@ describe('API Services Layer (100% Coverage)', () => {
         if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1' }, { id: 'f-2' }] });
         if (url.includes('f-1')) return Promise.reject(new Error('Finca 1 not found'));
         if (url.includes('f-2')) return Promise.resolve({ data: [{ id: 'c-2' }] });
-        if (url === '/tipo-labor') return Promise.resolve({ data: [] });
+        if (url === '/tipos-labor') return Promise.resolve({ data: [] });
         if (url === '/insumos') return Promise.resolve({ data: [] });
         return Promise.resolve({ data: [] });
       });
