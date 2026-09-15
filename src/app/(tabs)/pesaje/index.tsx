@@ -86,7 +86,7 @@ export default function PesajesScreen() {
         return (
           <Chip
             icon="check-circle"
-            textStyle={{ color: '#2E7D32' }}
+            textStyle={{ color: '#27AE60' }}
             style={{ backgroundColor: '#E8F5E9' }}
             compact
           >

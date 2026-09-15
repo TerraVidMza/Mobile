@@ -33,10 +33,13 @@ export default function TabLayout() {
             fontSize: 12,
             fontWeight: '600',
           },
+          // Mismo marrón oscuro que el sidebar del Web (`--sidebar` en
+          // index.css): un olivo saturado a todo el ancho quedaba muy
+          // chillón como barra superior.
           headerStyle: {
-            backgroundColor: theme.colors.primary,
+            backgroundColor: theme.dark ? '#17110C' : '#3E2B1F',
           },
-          headerTintColor: theme.colors.onPrimary,
+          headerTintColor: '#F5EFE0',
           headerTitleStyle: {
             fontWeight: '700',
           },

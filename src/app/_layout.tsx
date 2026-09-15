@@ -25,32 +25,64 @@ if (Platform.OS !== 'web') {
 }
 
 // ─── TerraVid Theme ──────────────────────────────────────────────────────────
+//
+// Misma paleta de marca que `Web/src/index.css` (tierra/oliva del viñedo),
+// mapeada a los roles de color de Material Design 3. Antes esto era un verde
+// bosque genérico sin relación con el resto del sistema.
 
-const terravidColors = {
-  primary: '#1B5E20',
-  primaryContainer: '#C8E6C9',
-  secondary: '#33691E',
-  secondaryContainer: '#DCEDC8',
-  tertiary: '#E65100',
-  tertiaryContainer: '#FFE0B2',
-  error: '#B71C1C',
-  errorContainer: '#FFCDD2',
-  surface: '#FFFFFF',
-  surfaceVariant: '#F1F8E9',
+const terravidColorsLight = {
+  primary: '#5C6B2E',
   onPrimary: '#FFFFFF',
-  onPrimaryContainer: '#1B5E20',
+  primaryContainer: '#A4B560',
+  onPrimaryContainer: '#1F1810',
+  secondary: '#7A6A5A',
   onSecondary: '#FFFFFF',
-  onSecondaryContainer: '#33691E',
-  onSurface: '#1C1B1F',
-  onSurfaceVariant: '#49454F',
-  outline: '#79747E',
+  secondaryContainer: '#F5EFE0',
+  onSecondaryContainer: '#1F1810',
+  tertiary: '#D35400',
+  onTertiary: '#FFFFFF',
+  tertiaryContainer: '#FFE0B2',
+  error: '#C0392B',
+  onError: '#FFFFFF',
+  errorContainer: '#F5D6D1',
+  surface: '#FFFFFF',
+  surfaceVariant: '#F5EFE0',
+  onSurface: '#1F1810',
+  onSurfaceVariant: '#7A6A5A',
+  outline: '#D1CECC',
+  background: '#FAF6EE',
+  onBackground: '#1F1810',
+};
+
+const terravidColorsDark = {
+  primary: '#A4B560',
+  onPrimary: '#1F1810',
+  primaryContainer: '#5C6B2E',
+  onPrimaryContainer: '#F5EFE0',
+  secondary: '#C4A882',
+  onSecondary: '#1F1810',
+  secondaryContainer: '#443428',
+  onSecondaryContainer: '#F5EFE0',
+  tertiary: '#E67E22',
+  onTertiary: '#1F1810',
+  tertiaryContainer: '#443428',
+  error: '#E0574A',
+  onError: '#1F1810',
+  errorContainer: '#5A4636',
+  surface: '#362A20',
+  surfaceVariant: '#443428',
+  onSurface: '#F5EFE0',
+  onSurfaceVariant: '#C4A882',
+  outline: '#5A4636',
+  background: '#1A130D',
+  onBackground: '#F5EFE0',
 };
 
 const lightTheme = {
   ...MD3LightTheme,
   colors: {
     ...MD3LightTheme.colors,
-    ...terravidColors,
+    ...terravidColorsLight,
   },
 };
 
@@ -58,14 +90,7 @@ const darkTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: '#81C784',
-    primaryContainer: '#1B5E20',
-    secondary: '#AED581',
-    secondaryContainer: '#33691E',
-    surface: '#121212',
-    surfaceVariant: '#1E1E1E',
-    onSurface: '#E0E0E0',
-    onSurfaceVariant: '#BDBDBD',
+    ...terravidColorsDark,
   },
 };
 
