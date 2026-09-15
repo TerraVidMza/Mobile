@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: TypeScript Strict Check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Run Jest Test Suites with Coverage
         run: npm test -- --coverage --coverageReporters=text-summary --coverageReporters=lcov
