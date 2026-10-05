@@ -18,6 +18,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-009 | Ubicación GPS opcional de cada registro | ✅ Implementada |
 | M-010 | Avance de cosecha contra la meta de la campaña | ✅ Implementada |
 | M-011 | PWA instalable que abre sin señal | ✅ Implementada |
+| M-012 | Distribución por APK y PWA, sin tiendas | ✅ Implementada |
 
 ---
 
@@ -278,3 +279,34 @@ La versión web es el canal para instalar TerraVid sin tiendas.
 **Limitación:** el comportamiento offline del service worker no tiene test
 automatizado (necesita un navegador). Se verificó que el export incluya el
 manifest, el service worker y su registro.
+
+## M-012 — Distribución por APK y PWA, sin tiendas
+
+**Contexto.** El product owner decidió no pagar las cuentas de Google Play ni de
+Apple: la app se distribuye como APK y como PWA. La configuración de build no
+servía para generar nada:
+
+- `eas.json` no definía la URL de la API en ningún perfil: el APK habría
+  apuntado al emulador (`10.0.2.2`). El perfil `production` generaba un `.aab`
+  (formato de tienda) y había una sección `submit` sin uso.
+- `app.json` tenía `projectId: "your-eas-project-id"` y apuntaba a un
+  `notification-icon.png` que no existía (el build fallaba).
+- El `Dockerfile` tampoco pasaba la URL de la API.
+
+**Decisión.**
+- Todos los perfiles de `eas.json` definen `EXPO_PUBLIC_API_BASE_URL`;
+  `production` genera **APK** con `versionCode` automático.
+- `app.config.js` agrega lo que depende del entorno sin versionarlo:
+  `google-services.json` (de la variable de archivo `GOOGLE_SERVICES_JSON` de
+  EAS, o del disco si existe) y el `projectId` (de `EAS_PROJECT_ID`). Sin ellos
+  el build igual funciona, sin push.
+- `notification-icon.png` generado como silueta blanca de 96 px (lo que pide
+  Android) a partir del ícono monocromo. Se configuró la pantalla de splash.
+- Se quitó `NSAllowsArbitraryLoads` (no hay build de iOS y la API es HTTPS).
+- `Dockerfile` recibe la URL como `ARG` y usa Node 24, igual que el CI.
+- CI: permisos 755/644 en vez de 777, Jest corre una sola vez y el resumen
+  informa el estado real del job.
+
+**Pendiente del lado del equipo:** crear la cuenta de Expo, correr
+`eas init`, subir `google-services.json` a EAS y cargar los secretos del CI.
+El procedimiento está en [`DEPLOYMENT.md`](../DEPLOYMENT.md).

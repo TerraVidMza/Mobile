@@ -1,209 +1,148 @@
-# 🚀 Plan Completo de Despliegue — TerraVid Mobile (Android, iOS y Web)
+# Despliegue — TerraVid Mobile
 
-Este documento detalla la arquitectura, prerrequisitos, comandos y procesos paso a paso para compilar, firmar, distribuir y publicar la aplicación **TerraVid Mobile** en sus tres plataformas de destino: **Android**, **iOS** y **Web**.
+TerraVid Mobile se distribuye de dos formas, **sin tiendas oficiales**
+(decisión del product owner, M-012):
 
----
+| Canal | Para quién | Cómo se instala |
+|---|---|---|
+| **APK de Android** | Capataces con teléfono Android | Se descarga el `.apk` y se instala (permitiendo "orígenes desconocidos") |
+| **PWA** | Cualquier teléfono o tablet con navegador | Se abre `https://terravid-mobile.duckdns.org` y se elige "Agregar a la pantalla de inicio" |
 
-## 1. Estrategia de Ambientes y Variables
-
-| Ambiente | Propósito | Backend URL | Distribución |
-|---|---|---|---|
-| **Development** | Desarrollo local y emuladores | `http://<IP-LOCAL>:3000/api` | Expo Go / Expo Dev Client |
-| **Preview (Staging)** | Pruebas de campo con capataces | `https://staging-api.terravid.com/api` | **Android**: APK directo<br>**iOS**: TestFlight Interno<br>**Web**: Vercel / Netlify Staging |
-| **Production** | Operación real de cosecha y labores | `https://api.terravid.com/api` | **Android**: Google Play Store (AAB)<br>**iOS**: Apple App Store (IPA)<br>**Web**: Nginx / CDN CloudFront |
-
-### Configuración de Variables de Entorno
-Crea los archivos de entorno correspondientes o configúralos en **EAS Secrets**:
-- `.env.development`: `EXPO_PUBLIC_API_BASE_URL=http://192.168.1.100:3000/api`
-- `.env.staging`: `EXPO_PUBLIC_API_BASE_URL=https://staging-api.terravid.com/api`
-- `.env.production`: `EXPO_PUBLIC_API_BASE_URL=https://api.terravid.com/api`
+Las dos usan el mismo código, funcionan sin señal y sincronizan solas al
+volver la conexión (M-001, M-003, M-011).
 
 ---
 
-## 2. Prerrequisitos Globales
+## 1. Ambientes y URL de la API
 
-1. **Instalar EAS CLI globalmente**:
-   ```bash
-   npm install -g eas-cli
-   ```
-2. **Iniciar sesión en Expo**:
-   ```bash
-   eas login
-   ```
-3. **Vincular el proyecto a EAS**:
-   ```bash
-   eas project:init
-   ```
-   *(Esto generará el `projectId` en `app.json`).*
+La URL de la API queda **dentro del bundle** al compilar. Se toma de
+`EXPO_PUBLIC_API_BASE_URL`:
 
----
+| Dónde | De dónde sale |
+|---|---|
+| Desarrollo local (`npm start`) | `.env` (copiar `.env.example`) |
+| APK (EAS Build) | `env` del perfil en [`eas.json`](eas.json) |
+| PWA (CI) | secreto `EXPO_PUBLIC_API_BASE_URL` del repositorio |
+| PWA (Docker) | `--build-arg EXPO_PUBLIC_API_BASE_URL=...` |
 
-## 3. Despliegue en Android
-
-### 3.1. Prerrequisitos
-- **Google Play Developer Account** (pago único de $25 USD en [play.google.com/console](https://play.google.com/console)).
-- Archivo `google-services.json` (descargado de Firebase Console para Push Notifications FCM).
+Producción hoy: `https://terravid-api.duckdns.org/api`. El dominio definitivo
+será `terravid.com`; al migrar hay que cambiarlo en `eas.json`, en el secreto
+del CI y volver a generar el APK.
 
 ---
 
-### 3.2. Ambiente Preview (APK para pruebas directas en viñedo)
-Permite generar un archivo `.apk` instalable directamente en cualquier celular Android sin pasar por Google Play Store:
+## 2. Generar el APK (EAS Build)
+
+### 2.1. Una sola vez
+
+1. Cuenta gratuita en [expo.dev](https://expo.dev) e instalar la CLI:
+   `npm install -g eas-cli` y `eas login`.
+2. Vincular el proyecto: `eas init`. Crea el proyecto en Expo y muestra su
+   `projectId`; guardarlo como variable `EAS_PROJECT_ID` (en el entorno local
+   y en *expo.dev → proyecto → Environment variables*). `app.config.js` lo toma
+   de ahí.
+3. **Notificaciones push (FCM):** descargar `google-services.json` desde la
+   consola de Firebase (proyecto → Configuración → app Android
+   `com.terravidmza.mobile`) y subirlo a EAS como variable **de tipo archivo**
+   llamada `GOOGLE_SERVICES_JSON`. No se versiona (está en `.gitignore`). Sin
+   él el APK funciona igual, pero sin push.
+4. Claves de firma: en el primer build EAS ofrece generarlas y guardarlas.
+   Aceptar. **Hay que firmar siempre con la misma clave**: si cambia, los
+   teléfonos no pueden actualizar sin desinstalar (y perder los registros sin
+   sincronizar).
+
+### 2.2. Cada versión
 
 ```bash
-# Compilar APK de preview en la nube de EAS
-eas build --platform android --profile preview
-```
-* **Resultado**: Al finalizar, la terminal te dará un enlace y un código QR para descargar el `.apk` directamente en los celulares de los capataces.
-
----
-
-### 3.3. Ambiente Producción (Google Play Store)
-
-#### Paso 1: Generar el Android App Bundle (.aab)
-```bash
+# Subir la versión visible en app.json ("version": "1.1.0").
+# versionCode lo incrementa EAS (autoIncrement en el perfil production).
 eas build --platform android --profile production
 ```
-*EAS gestionará automáticamente la clave criptográfica de firma (Keystore) de forma segura en la nube.*
 
-#### Paso 2: Subir a Google Play Console (Track Interno / Producción)
-1. **Configurar Google Service Account**:
-   - En Google Cloud Console, crea una cuenta de servicio con permisos en Google Play Android Developer.
-   - Descarga la clave en formato JSON (ej. `pc-api-key.json`).
-2. **Enviar el binario automáticamente**:
-   ```bash
-   eas submit --platform android --profile production --key pc-api-key.json
-   ```
-3. **Completar ficha en Google Play Console**:
-   - Capturas de pantalla para teléfonos y tablets.
-   - Declaración de políticas de privacidad y permisos (`INTERNET`, `VIBRATE`).
-   - Promover de *Pruebas Internas* $\to$ *Producción*.
+EAS compila en la nube (el plan gratuito alcanza) y deja un enlace al `.apk`.
+Ese enlace es lo que se comparte con los capataces.
 
----
-
-## 4. Despliegue en iOS
-
-### 4.1. Prerrequisitos
-- **Apple Developer Program** ($99 USD/año en [developer.apple.com](https://developer.apple.com)).
-- Acceso a **App Store Connect**.
-
----
-
-### 4.2. Ambiente Preview / TestFlight
-Apple no permite instalar archivos sueltos sin firmar. La forma oficial y más rápida es a través de **TestFlight**:
-
-```bash
-# Compilar binario para TestFlight
-eas build --platform ios --profile preview
-```
-*EAS solicitará tus credenciales de Apple Developer una única vez para generar el Certificado de Distribución y el Provisioning Profile automáticamente.*
-
----
-
-### 4.3. Ambiente Producción (Apple App Store)
-
-#### Paso 1: Compilar para Producción
-```bash
-eas build --platform ios --profile production
-```
-
-#### Paso 2: Enviar a App Store Connect
-```bash
-eas submit --platform ios --profile production
-```
-
-#### Paso 3: Ficha en App Store Connect
-- Subir capturas de pantalla de iPhone (6.7" y 6.5").
-- Completar descripción, URL de soporte y política de privacidad.
-- Enviar a Revisión de Apple (*App Review*).
-
----
-
-## 5. Despliegue en Web
-
-La versión Web de TerraVid Mobile permite a supervisores y administrativos acceder a la misma interfaz desde cualquier navegador de escritorio o tablet.
-
-### 5.1. Compilación del Bundle Estático
-Para generar los archivos estáticos optimizados (HTML, JS, CSS, Assets):
-
-```bash
-npx expo export --platform web
-```
-*Esto generará la carpeta **`dist/`** lista para ser servida.*
-
----
-
-### 5.2. Opciones de Hosting para Producción
-
-#### Opción A: Despliegue en Google Cloud VM + Caddy (Producción Actual — 100% Operativo)
-
-La aplicación Web de producción se encuentra alojada en la máquina virtual de Google Cloud (`terravid`), servida por **Caddy 2 con HTTPS automático y compresión Zstandard / Gzip**:
-
-- **URL de Producción**: [`https://terravid-mobile.duckdns.org`](https://terravid-mobile.duckdns.org)
-- **Directorio en VM**: `/opt/terravid/mobile/`
-- **Configuración de Caddy** (`/opt/backend/deploy/Caddyfile`):
-  ```caddy
-  terravid-mobile.duckdns.org {
-      root * /srv/mobile
-      file_server
-      try_files {path} /index.html
-      encode zstd gzip
-
-      header {
-          Strict-Transport-Security "max-age=31536000; includeSubDomains"
-          X-Content-Type-Options "nosniff"
-          X-Frame-Options "SAMEORIGIN"
-          Referrer-Policy "no-referrer"
-          -Server
-      }
-  }
-  ```
-
----
-
-## 6. Pipeline de Entrega Continua (CD) Automatizado (GitHub Actions)
-
-El workflow [`.github/workflows/deploy-mobile.yml`](file:///c:/Users/SergioFarias/Downloads/UTN%20FRM/TerraVid/Mobile/.github/workflows/deploy-mobile.yml) implementa un pipeline de **3 etapas** que compila, valida y publica automáticamente a la VM de Google Cloud en cada `push` o `merge` a la rama `main`:
-
-```mermaid
-graph TD
-    A[Push o Merge a 'main'] --> B[Job 1: validate]
-    B --> B1[TypeScript Strict Check: tsc --noEmit]
-    B --> B2[Jest Test Suites: 30 suites / 125 tests]
-    B --> B3[Web Production Smoke Test]
-    
-    B -->|100% Aprobado| C[Job 2: build-web]
-    C --> C1[npx expo export --platform web]
-    C --> C2[Upload Artifact: web-dist]
-    
-    C -->|Aprobado| D[Job 3: deploy-gcp]
-    D --> D1[Download Artifact web-dist]
-    D --> D2[SSH / SCP a VM Google Cloud 34.9.190.155]
-    D --> D3[Extract a /opt/terravid/mobile]
-    D --> D4[Restart Caddy Container]
-    D --> D5[Health Check: curl -f https://terravid-mobile.duckdns.org]
-    D --> D6[Publish Step Summary en GitHub Actions]
-```
-
-### Configuración de GitHub Secrets
-
-Para habilitar el despliegue automático por SSH, se configuran los siguientes **Secrets** en el repositorio (`Settings -> Secrets and variables -> Actions`):
-
-| Secret | Descripción | Valor |
+| Perfil | Para qué | API |
 |---|---|---|
-| `GCP_VM_HOST` | IP o dominio de la VM | `34.9.190.155` o `terravid-mobile.duckdns.org` |
-| `GCP_VM_USER` | Usuario SSH en la VM | `SergioFarias` |
-| `GCP_VM_SSH_KEY` | Clave privada SSH (ED25519) | Contenido de `id_ed25519_deploy` |
-| `EXPO_PUBLIC_API_BASE_URL` | Endpoint base de la API REST | `https://terravid-api.duckdns.org/api` |
+| `development` | Cliente de desarrollo con recarga en caliente | `10.0.2.2:3000` (emulador) |
+| `preview` | APK de prueba interna | producción |
+| `production` | APK para distribuir | producción |
+
+### 2.3. Instalar y actualizar en el teléfono
+
+- **Instalar:** abrir el enlace desde el teléfono, descargar el `.apk` y
+  permitir la instalación de orígenes desconocidos para el navegador.
+- **Actualizar:** instalar el APK nuevo encima. Los registros sin sincronizar
+  se conservan (la base local migra sola, M-002).
+- **Antes de cambiar de teléfono:** sincronizar, o usar *Inicio → Ajustes →
+  Respaldo* para sacar los registros (M-008).
 
 ---
 
+## 3. PWA (versión web)
+
+### 3.1. Compilar
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=https://terravid-api.duckdns.org/api npx expo export --platform web
+```
+
+Genera `dist/` con el manifest, el service worker (`sw.js`), los íconos y el
+`.wasm` de SQLite.
+
+### 3.2. Servir
+
+En producción la sirve el Caddy de la VM (bloque `terravid-mobile.duckdns.org`
+en `Backend/deploy/Caddyfile`), desde `/opt/terravid/mobile`, montado en el
+contenedor como `/srv/mobile`.
+
+**Caché:** `sw.js`, `index.html` y `manifest.json` no se pueden cachear (si
+no, una versión nueva no llega nunca); los bundles con hash, sí. Ya está
+configurado en el Caddyfile y en [`nginx.conf`](nginx.conf) (imagen Docker
+alternativa).
+
+Con Docker:
+
+```bash
+docker build --build-arg EXPO_PUBLIC_API_BASE_URL=https://terravid-api.duckdns.org/api -t terravid-mobile .
+docker run -p 8080:80 terravid-mobile
+```
+
 ---
 
-## 8. Checklist Pre-Lanzamiento (Go-Live)
+## 4. Despliegue automático de la PWA (GitHub Actions)
 
-- [ ] **Backend URL**: Verificar que `EXPO_PUBLIC_API_BASE_URL` apunte al dominio HTTPS de producción.
-- [ ] **CORS**: En el backend (`Platform/src/main.ts`), confirmar que el dominio Web de producción esté en `allowedOrigins`.
-- [ ] **Iconos y Splash**: Assets de alta resolución ubicados en `assets/`.
-- [ ] **Versionado**: Incrementar `version` (ej. `1.0.1`) y `versionCode` / `buildNumber` en `app.json`.
-- [ ] **Credenciales EAS**: Ejecutar `eas credentials` para validar certificados activos de Android e iOS.
-- [ ] **Batería de Pruebas Offline**: Realizar una prueba física de carga de labor y pesaje en modo avión y verificar auto-sincronización al reactivar la conexión.
+[`.github/workflows/deploy-mobile.yml`](.github/workflows/deploy-mobile.yml),
+en cada push a `main`:
+
+1. **validate:** `tsc`, Jest con cobertura y un export web de prueba.
+2. **build-web:** `expo export` con la URL de producción.
+3. **deploy-gcp:** copia `dist/` a la VM por SSH, lo extrae en
+   `/opt/terravid/mobile` (directorios 755, archivos 644), reinicia Caddy y
+   verifica que responda.
+
+El resumen del job informa el estado real (antes decía "200 OK" aunque
+hubiera fallado).
+
+**Secretos del repositorio** (*Settings → Secrets and variables → Actions*):
+
+| Secreto | Contenido |
+|---|---|
+| `GCP_VM_HOST` | IP o dominio de la VM |
+| `GCP_VM_USER` | Usuario SSH |
+| `GCP_VM_SSH_KEY` | Clave privada SSH de despliegue |
+| `EXPO_PUBLIC_API_BASE_URL` | URL de la API |
+
+> El workflow todavía tiene la IP y el usuario como valores por defecto si
+> faltan los secretos. Conviene cargar los secretos y quitar esos valores.
+
+---
+
+## 5. Checklist antes de distribuir
+
+- [ ] `EXPO_PUBLIC_API_BASE_URL` de `eas.json` y del secreto del CI apuntan a la API de producción.
+- [ ] `CORS_ORIGIN` del backend incluye `https://terravid-mobile.duckdns.org` (la PWA lo necesita; el APK no).
+- [ ] `version` de `app.json` incrementada.
+- [ ] `EAS_PROJECT_ID` y `GOOGLE_SERVICES_JSON` cargados en EAS.
+- [ ] Prueba en un teléfono real: registrar en modo avión, volver a tener señal y verificar que suba solo.
+- [ ] Prueba de la PWA: instalarla, cortar la red y verificar que abra.

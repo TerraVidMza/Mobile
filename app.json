@@ -10,12 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.terravidmza.mobile",
-      "infoPlist": {
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
-        }
-      }
+      "bundleIdentifier": "com.terravidmza.mobile"
     },
     "android": {
       "package": "com.terravidmza.mobile",
@@ -34,7 +29,8 @@
         "ACCESS_FINE_LOCATION",
         "USE_BIOMETRIC",
         "USE_FINGERPRINT"
-      ]
+      ],
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -70,12 +66,14 @@
       "typedRoutes": true
     },
     "extra": {
-      "eas": {
-        "projectId": "your-eas-project-id"
-      },
       "router": {
         "origin": false
       }
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5EFE0"
     }
   }
 }
