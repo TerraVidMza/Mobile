@@ -10,6 +10,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-001 | SQLite real en la PWA con sql.js | ✅ Implementada |
 | M-002 | Migraciones versionadas del esquema local | ✅ Implementada |
 | M-003 | Reintento automático: lo que no sube queda pendiente | ✅ Implementada |
+| M-004 | Sesión con refresh token que sobrevive al trabajo offline | ✅ Implementada |
 
 ---
 
@@ -117,3 +118,37 @@ estado sigue mostrando el total de pendientes.
 - `src/types/api.types.ts` es el espejo del backend: si cambia un DTO allá, hay
   que cambiarlo acá y en los tests de `src/sync/`, que usan la forma real de la
   respuesta.
+
+## M-004 — Sesión con refresh token que sobrevive al trabajo offline
+
+**Contexto.** El backend pasó a sesiones con access token corto (15 minutos por
+defecto) y refresh token rotativo (D-023 del Backend). La app guardaba un solo
+token y, ante cualquier 401, cerraba la sesión. Con un access de 15 minutos eso
+expulsaría al capataz cada vez que vuelve a tener señal.
+
+**Decisión.**
+- SecureStore (localStorage en la PWA) guarda `accessToken`, `refreshToken`,
+  `refreshExpiresAt` y `user`. `sesion.service.ts` centraliza guardar, borrar y
+  renovar.
+- **Renovación anticipada:** si al access le queda menos de un minuto, el
+  interceptor de request renueva antes de mandar.
+- **Renovación ante 401:** se renueva y se reintenta la request una sola vez.
+  Si el token recién renovado también da 401, se cierra la sesión (sin bucle).
+- **Un único `/auth/refresh` en vuelo.** La sincronización manda varias
+  requests a la vez, y el backend trata el segundo uso del mismo refresh token
+  como robo.
+- **Sin señal no se cierra la sesión.** Si la renovación falla por red, la
+  request falla con su error (la sincronización la reintenta, M-003) y la
+  sesión queda intacta. Solo un 401 del propio `/auth/refresh` la termina.
+- **Arranque sin señal.** `restore()` deja entrar con el access vencido
+  mientras el refresh siga vigente: el capataz carga registros offline y la
+  primera request al volver la conexión renueva. Si los dos vencieron, pide
+  login.
+- Cada renovación trae el usuario actualizado y el store lo toma (un cambio
+  de rol se ve sin volver a entrar).
+
+**Consecuencias.**
+- Un capataz puede trabajar sin señal tanto tiempo como dure el refresh token
+  de su empresa (7 días por defecto, configurable hasta 30 en la Web).
+- Las sesiones guardadas antes de esta versión no tienen refresh token: duran
+  lo que les queda al access y después piden login.

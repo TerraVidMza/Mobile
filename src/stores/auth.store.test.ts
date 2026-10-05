@@ -141,4 +141,76 @@ describe('useAuthStore (100% Coverage)', () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().token).toBeNull();
   });
+
+  describe('restore con refresh token (M-004)', () => {
+    const usuario = {
+      id: 'u-1',
+      email: 'capataz@terravid.com',
+      rol: 'Capataz',
+      empresaId: 'emp-1',
+      debeCambiarPassword: false,
+    };
+    const jwt = (exp: number) =>
+      `x.${Buffer.from(JSON.stringify({ exp })).toString('base64url')}.y`;
+    const VENCIDO = jwt(Math.floor(Date.now() / 1000) - 3600);
+
+    function guardado(valores: Record<string, string>) {
+      (secureStorage.getItem as jest.Mock).mockImplementation(
+        async (key: string) => valores[key] ?? null,
+      );
+    }
+
+    it('entra sin señal con el access vencido si el refresh sigue vigente', async () => {
+      guardado({
+        accessToken: VENCIDO,
+        refreshToken: 'refresh-1',
+        refreshExpiresAt: '2099-01-01T00:00:00.000Z',
+        user: JSON.stringify(usuario),
+      });
+
+      await useAuthStore.getState().restore();
+
+      expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    });
+
+    it('pide login si el access y el refresh vencieron', async () => {
+      guardado({
+        accessToken: VENCIDO,
+        refreshToken: 'refresh-1',
+        refreshExpiresAt: '2000-01-01T00:00:00.000Z',
+        user: JSON.stringify(usuario),
+      });
+
+      await useAuthStore.getState().restore();
+
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+      expect(secureStorage.deleteItem).toHaveBeenCalledWith('refreshToken');
+    });
+
+    it('pide login con una sesión vieja (sin refresh) cuyo access venció', async () => {
+      guardado({ accessToken: VENCIDO, user: JSON.stringify(usuario) });
+
+      await useAuthStore.getState().restore();
+
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
+
+    it('el login guarda el refresh token', async () => {
+      (authService.login as jest.Mock).mockResolvedValue({
+        accessToken: 'a',
+        expiresIn: 900,
+        refreshToken: 'refresh-1',
+        refreshExpiresAt: '2099-01-01T00:00:00.000Z',
+        user: usuario,
+      });
+
+      await useAuthStore.getState().login('capataz@terravid.com', 'x');
+
+      expect(secureStorage.setItem).toHaveBeenCalledWith('refreshToken', 'refresh-1');
+      expect(secureStorage.setItem).toHaveBeenCalledWith(
+        'refreshExpiresAt',
+        '2099-01-01T00:00:00.000Z',
+      );
+    });
+  });
 });

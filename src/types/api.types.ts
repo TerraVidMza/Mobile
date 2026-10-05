@@ -30,8 +30,15 @@ export interface LoginRequest {
   password: string;
 }
 
+/** Respuesta de `POST /auth/login` y de `POST /auth/refresh` (D-023 del backend). */
 export interface LoginResponse {
   accessToken: string;
+  /** Segundos de vida del access token. */
+  expiresIn: number;
+  /** Valor opaco; se cambia por uno nuevo en cada renovación. */
+  refreshToken: string;
+  /** ISO 8601: después de esta fecha hay que volver a iniciar sesión. */
+  refreshExpiresAt: string;
   user: AuthUser;
 }
 

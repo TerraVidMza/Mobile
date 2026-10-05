@@ -1,14 +1,22 @@
 /**
  * Store de autenticación — Zustand + Secure Storage.
  *
- * Gestiona el estado de sesión, persiste el JWT en SecureStore / localStorage,
- * y coordina la descarga de catálogos al login exitoso.
+ * Gestiona el estado de sesión, persiste los tokens en SecureStore /
+ * localStorage (access + refresh, M-004) y coordina la descarga de catálogos
+ * al login exitoso.
  */
 
 import { create } from 'zustand';
 import { secureStorage } from '../utils/storage';
 import { authService } from '../services/auth.service';
 import { registerUnauthorizedCallback } from '../services/api';
+import {
+  borrarSesion,
+  guardarSesion,
+  puedeRenovar,
+  registrarAlRenovar,
+  vencimientoDelToken,
+} from '../services/sesion.service';
 import { catalogosSyncService } from '../services/catalogos-sync.service';
 import { useCatalogosStore } from './catalogos.store';
 import type { AuthUser } from '../types/api.types';
@@ -52,10 +60,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authService.login({ email, password });
 
-      // Persiste el token en almacenamiento seguro
-      await secureStorage.setItem('accessToken', response.accessToken);
-      // Persiste datos del usuario para restaurar en el próximo arranque
-      await secureStorage.setItem('user', JSON.stringify(response.user));
+      // Tokens y usuario en almacenamiento seguro, para restaurar la sesión
+      // en el próximo arranque aunque no haya señal.
+      await guardarSesion(response);
 
       set({
         user: response.user,
@@ -100,15 +107,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      // Intenta notificar al backend (revoca el JWT en el servidor).
+      // Revoca en el servidor el access token y la sesión con su refresh token.
       if (get().token) {
         await authService.logout();
       }
     } catch {
       // Si falla (ej. sin red), la sesión se limpia igual en el cliente.
     } finally {
-      await secureStorage.deleteItem('accessToken');
-      await secureStorage.deleteItem('user');
+      await borrarSesion();
       set({
         user: null,
         token: null,
@@ -124,7 +130,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await secureStorage.getItem('accessToken');
       const userStr = await secureStorage.getItem('user');
 
-      if (token && userStr) {
+      // Se entra aunque el access token haya vencido, mientras el refresh siga
+      // vigente: el capataz puede abrir la app sin señal y cargar registros, y
+      // la primera request al volver la conexión renueva la sesión (M-004).
+      const vence = token ? vencimientoDelToken(token) : null;
+      const accessVigente = !vence || vence > new Date();
+      const sesionUtilizable = accessVigente || (await puedeRenovar());
+
+      if (token && userStr && sesionUtilizable) {
         const user: AuthUser = JSON.parse(userStr);
         set({
           user,
@@ -136,9 +149,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
     } catch {
-      await secureStorage.deleteItem('accessToken');
-      await secureStorage.deleteItem('user');
+      // Datos corruptos: se descartan.
     }
+    await borrarSesion();
     set({ isLoading: false });
   },
 
@@ -158,4 +171,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 registerUnauthorizedCallback(() => {
   useAuthStore.getState().clearSession();
+});
+
+// Cada renovación trae el usuario actualizado (rol, contraseña temporal).
+registrarAlRenovar((user) => {
+  useAuthStore.setState({ user, debeCambiarPassword: user.debeCambiarPassword });
 });

@@ -21,7 +21,7 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 - **Expo Router**: Navegación file-based con grupos `(auth)` y `(tabs)`
 - **SQLite (`expo-sqlite`)**: Persistencia local offline-first
 - **Zustand**: Gestión de estado global (auth, sync, catálogos)
-- **Axios**: Cliente HTTP con interceptors para inyección de JWT y manejo 401
+- **Axios**: Cliente HTTP con interceptors que inyectan el JWT y lo renuevan con el refresh token (M-004)
 - **NetInfo (`@react-native-community/netinfo`)**: Detección reactiva de reconexión (≤5s)
 - **Expo Notifications + FCM**: Notificaciones push
 - **React Native Paper**: Sistema de diseño con modo claro/oscuro y alto contraste solar
@@ -32,7 +32,7 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 
 | HU | Funcionalidad | Pantalla / Módulo | Estado |
 |---|---|---|---|
-| **HU-01** | Iniciar sesión (JWT, rate limiting) | `(auth)/login` | Completa |
+| **HU-01** | Iniciar sesión (JWT + refresh token, M-004) | `(auth)/login` | Completa |
 | **HU-02** | Cerrar sesión (revocación de token) | `(tabs)/index` (Logout) | Completa |
 | **HU-03** | Recuperar contraseña | `(auth)/forgot-password`, `(auth)/reset-password` | Completa |
 | **HU-04** | Cambiar contraseña | `cambiar-password` | Completa |
