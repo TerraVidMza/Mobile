@@ -18,7 +18,7 @@ export const pesajesRepo = {
    * Guarda un nuevo pesaje de vendimia en SQLite con estado pendiente.
    */
   async createPesaje(
-    pesaje: Omit<PesajeVendimiaLocal, 'createdAt' | 'serverId'>,
+    pesaje: Omit<PesajeVendimiaLocal, 'createdAt' | 'serverId' | 'intentosSync'>,
   ): Promise<void> {
     const db = await getDatabase();
     await db.runAsync(
@@ -56,7 +56,7 @@ export const pesajesRepo = {
     await db.runAsync(
       `UPDATE pesaje_vendimia
        SET cuadrilla_id = ?, cuartel_id = ?, fecha = ?, peso_kg = ?,
-           estado_sync = ?, error_message = NULL
+           estado_sync = ?, error_message = NULL, intentos_sync = 0
        WHERE local_uuid = ?`,
       [
         pesaje.cuadrillaId,
@@ -98,6 +98,7 @@ export const pesajesRepo = {
       peso_kg: number;
       estado_sync: string;
       error_message: string | null;
+      intentos_sync: number;
       created_at_local: string;
       created_at: string;
       server_id: string | null;
@@ -129,6 +130,7 @@ export const pesajesRepo = {
       pesoKg: row.peso_kg,
       estadoSync: row.estado_sync as EstadoSync,
       errorMessage: row.error_message,
+      intentosSync: row.intentos_sync,
       createdAtLocal: row.created_at_local,
       createdAt: row.created_at,
       serverId: row.server_id,
@@ -140,9 +142,12 @@ export const pesajesRepo = {
   },
 
   /**
-   * Obtiene los pesajes pendientes de sincronización (lotes de máx 10).
+   * Obtiene los pesajes pendientes de sincronización (lotes de máx 10), ya con
+   * la forma del DTO del backend (`kgTotales`).
+   *
+   * `offset` saltea los que ya fallaron en la ronda en curso (M-003).
    */
-  async getPendientes(limit = 10): Promise<CreatePesajeDto[]> {
+  async getPendientes(limit = 10, offset = 0): Promise<CreatePesajeDto[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<{
       local_uuid: string;
@@ -155,9 +160,9 @@ export const pesajesRepo = {
       `SELECT local_uuid, cuadrilla_id, cuartel_id, fecha, peso_kg, created_at_local
        FROM pesaje_vendimia
        WHERE estado_sync = ?
-       ORDER BY created_at_local ASC
-       LIMIT ?`,
-      [EstadoSync.PENDIENTE, limit],
+       ORDER BY created_at_local ASC, local_uuid ASC
+       LIMIT ? OFFSET ?`,
+      [EstadoSync.PENDIENTE, limit, offset],
     );
 
     return rows.map((r) => ({
@@ -165,7 +170,8 @@ export const pesajesRepo = {
       cuadrillaId: r.cuadrilla_id,
       cuartelId: r.cuartel_id,
       fecha: r.fecha,
-      pesoKg: r.peso_kg,
+      // El backend llama kgTotales a lo que localmente es peso_kg.
+      kgTotales: r.peso_kg,
       createdAtLocal: r.created_at_local,
     }));
   },
@@ -196,15 +202,16 @@ export const pesajesRepo = {
   },
 
   /**
-   * Marca un pesaje con error de sincronización.
+   * Registra un intento de sincronización fallido: el pesaje sigue pendiente
+   * con el mensaje del error (M-003).
    */
-  async markError(localUuid: string, errorMessage: string): Promise<void> {
+  async registrarIntentoFallido(localUuid: string, errorMessage: string): Promise<void> {
     const db = await getDatabase();
     await db.runAsync(
       `UPDATE pesaje_vendimia
-       SET estado_sync = ?, error_message = ?
+       SET estado_sync = ?, error_message = ?, intentos_sync = intentos_sync + 1
        WHERE local_uuid = ?`,
-      [EstadoSync.ERROR, errorMessage, localUuid],
+      [EstadoSync.PENDIENTE, errorMessage, localUuid],
     );
   },
 
@@ -226,6 +233,7 @@ export const pesajesRepo = {
       peso_kg: number;
       estado_sync: string;
       error_message: string | null;
+      intentos_sync: number;
       created_at_local: string;
       created_at: string;
       server_id: string | null;
@@ -251,6 +259,7 @@ export const pesajesRepo = {
       pesoKg: r.peso_kg,
       estadoSync: r.estado_sync as EstadoSync,
       errorMessage: r.error_message,
+      intentosSync: r.intentos_sync,
       createdAtLocal: r.created_at_local,
       createdAt: r.created_at,
       serverId: r.server_id,

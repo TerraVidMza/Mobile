@@ -1,5 +1,5 @@
 /**
- * Detalle y Resolución de Conflictos de Labor (HU-12, HU-14, HU-17).
+ * Detalle de Labor y motivo de los intentos de sincronización fallidos (HU-12, HU-14, HU-17).
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,7 +8,6 @@ import {
   Text,
   Card,
   Button,
-  Chip,
   Divider,
   useTheme,
   ActivityIndicator,
@@ -18,6 +17,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { laboresRepo } from '../../../db/repositories/labores.repo';
 import { syncEngine } from '../../../sync/sync-engine';
 import { haptics } from '../../../utils/haptics';
+import { EstadoSyncChip } from '../../../components/sync/EstadoSyncChip';
 import { EstadoSync } from '../../../types/api.types';
 import type { DetalleInsumoLocal, RegistroLaborLocal } from '../../../types/api.types';
 
@@ -116,8 +116,8 @@ export default function DetalleLaborScreen() {
       style={[styles.container, { backgroundColor: theme.colors.surface }]}
       contentContainerStyle={styles.content}
     >
-      {/* Alerta de Error / Conflicto (HU-14 Criterio 4) */}
-      {labor.estadoSync === EstadoSync.ERROR && (
+      {/* Motivo del último intento fallido (HU-14 Criterio 4, M-003) */}
+      {labor.estadoSync === EstadoSync.PENDIENTE && labor.errorMessage && (
         <Card style={[styles.errorCard, { backgroundColor: theme.colors.errorContainer }]}>
           <Card.Content>
             <View style={styles.errorHeader}>
@@ -130,14 +130,21 @@ export default function DetalleLaborScreen() {
                 variant="titleMedium"
                 style={{ color: theme.colors.onErrorContainer, fontWeight: '700', marginLeft: 8 }}
               >
-                Inconsistencia / Error de Sincronización
+                No se pudo sincronizar
+                {labor.intentosSync > 0 ? ` (${labor.intentosSync} intento${labor.intentosSync > 1 ? 's' : ''})` : ''}
               </Text>
             </View>
             <Text
               variant="bodyMedium"
               style={{ color: theme.colors.onErrorContainer, marginTop: 8 }}
             >
-              {labor.errorMessage ?? 'El servidor no pudo procesar este registro.'}
+              {labor.errorMessage}
+            </Text>
+            <Text
+              variant="bodySmall"
+              style={{ color: theme.colors.onErrorContainer, marginTop: 8 }}
+            >
+              El registro sigue pendiente y se reintenta automáticamente.
             </Text>
           </Card.Content>
         </Card>
@@ -149,7 +156,11 @@ export default function DetalleLaborScreen() {
             <Text variant="headlineSmall" style={{ fontWeight: '700', color: theme.colors.primary, flex: 1 }}>
               {labor.tipoLaborNombre}
             </Text>
-            <Chip compact>{labor.estadoSync.toUpperCase()}</Chip>
+            <EstadoSyncChip
+              estado={labor.estadoSync}
+              errorMessage={labor.errorMessage}
+              intentos={labor.intentosSync}
+            />
           </View>
 
           <Divider style={{ marginVertical: 12 }} />

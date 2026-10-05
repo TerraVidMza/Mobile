@@ -10,6 +10,13 @@ export enum RolNombre {
 
 // ─── Estado de sincronización ─────────────────────────────────────────────────
 
+/**
+ * Espejo del enum EstadoSync del backend.
+ *
+ * Localmente un registro solo está `pendiente` o `sincronizado`: un intento
+ * fallido lo deja pendiente con el mensaje del error (M-003). `error` solo
+ * llega en las respuestas del backend.
+ */
 export enum EstadoSync {
   PENDIENTE = 'pendiente',
   SINCRONIZADO = 'sincronizado',
@@ -122,7 +129,7 @@ export interface CreatePesajeDto {
   cuadrillaId: string;
   cuartelId: string;
   fecha: string;
-  pesoKg: number;          // > 0
+  kgTotales: number;       // > 0 (localmente se guarda como peso_kg)
   createdAtLocal?: string;
 }
 
@@ -155,11 +162,23 @@ export interface RegistrarDeviceTokenDto {
 
 // ─── Resultado de sincronización ──────────────────────────────────────────────
 
+/**
+ * Resultado por registro de `POST /registro-labor/sync` y `/pesajes-vendimia/sync`
+ * (y del POST individual). Espejo de SyncResultItem / SyncPesajeResultItem del
+ * backend.
+ */
 export interface SyncResultItem {
   localUuid: string;
-  serverId?: string;
-  yaExistia: boolean;
-  error?: string;
+  estado: EstadoSync;
+  /** Id en el servidor de una labor. */
+  registroId?: string;
+  /** Id en el servidor de un pesaje. */
+  pesajeId?: string;
+  errorMessage?: string;
+  /** true cuando ya estaba sincronizado (reintento idempotente). */
+  yaExistia?: boolean;
+  /** Se guardó, pero usa un ítem de catálogo dado de baja (HU-14). */
+  inconsistenciaCatalogo?: boolean;
 }
 
 // ─── Registro local en SQLite ─────────────────────────────────────────────────
@@ -171,10 +190,13 @@ export interface RegistroLaborLocal {
   fecha: string;
   cantidad: number;
   estadoSync: EstadoSync;
+  /** Mensaje del último intento fallido; null si nunca falló. */
   errorMessage: string | null;
   createdAtLocal: string;
   createdAt: string;
   serverId: string | null;
+  /** Intentos de sincronización fallidos (M-003). */
+  intentosSync: number;
 }
 
 export interface DetalleInsumoLocal {
@@ -191,8 +213,11 @@ export interface PesajeVendimiaLocal {
   fecha: string;
   pesoKg: number;
   estadoSync: EstadoSync;
+  /** Mensaje del último intento fallido; null si nunca falló. */
   errorMessage: string | null;
   createdAtLocal: string;
   createdAt: string;
   serverId: string | null;
+  /** Intentos de sincronización fallidos (M-003). */
+  intentosSync: number;
 }

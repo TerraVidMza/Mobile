@@ -133,8 +133,9 @@ describe('SQLite Repositories (100% Coverage)', () => {
         [{ insumoId: 'i-1', cantidad: 4 }],
       );
 
-      // Marcar error
-      await laboresRepo.markError('labor-test-1', 'Error temporal');
+      // Intento fallido: sigue pendiente (M-003)
+      await laboresRepo.registrarIntentoFallido('labor-test-1', 'Error temporal');
+      expect(await laboresRepo.countPendientes()).toBe(1);
 
       // Marcar sincronizado
       await laboresRepo.markSincronizado('labor-test-1', 'server-id-labor-1');
@@ -193,8 +194,9 @@ describe('SQLite Repositories (100% Coverage)', () => {
         pesoKg: 1800,
       });
 
-      // Marcar error
-      await pesajesRepo.markError('pesaje-test-1', 'Error de peso');
+      // Intento fallido: sigue pendiente (M-003)
+      await pesajesRepo.registrarIntentoFallido('pesaje-test-1', 'Error de peso');
+      expect(await pesajesRepo.countPendientes()).toBe(1);
 
       // Marcar sincronizado
       await pesajesRepo.markSincronizado('pesaje-test-1', 'srv-p1');

@@ -15,7 +15,7 @@ export const laboresRepo = {
    * Guarda una nueva labor y sus insumos asociados de forma atómica en SQLite.
    */
   async createLabor(
-    labor: Omit<RegistroLaborLocal, 'createdAt' | 'serverId'>,
+    labor: Omit<RegistroLaborLocal, 'createdAt' | 'serverId' | 'intentosSync'>,
     insumos: { insumoId: string; cantidad: number }[],
   ): Promise<void> {
     const db = await getDatabase();
@@ -66,7 +66,7 @@ export const laboresRepo = {
       await db.runAsync(
         `UPDATE registro_labor
          SET cuartel_id = ?, tipo_labor_id = ?, fecha = ?, cantidad = ?,
-             estado_sync = ?, error_message = NULL
+             estado_sync = ?, error_message = NULL, intentos_sync = 0
          WHERE local_uuid = ?`,
         [
           labor.cuartelId,
@@ -132,6 +132,7 @@ export const laboresRepo = {
       cantidad: number;
       estado_sync: string;
       error_message: string | null;
+      intentos_sync: number;
       created_at_local: string;
       created_at: string;
       server_id: string | null;
@@ -163,6 +164,7 @@ export const laboresRepo = {
       cantidad: row.cantidad,
       estadoSync: row.estado_sync as EstadoSync,
       errorMessage: row.error_message,
+      intentosSync: row.intentos_sync,
       createdAtLocal: row.created_at_local,
       createdAt: row.created_at,
       serverId: row.server_id,
@@ -174,10 +176,13 @@ export const laboresRepo = {
   },
 
   /**
-   * Obtiene todos los registros pendientes de sincronización con sus insumos,
-   * ordenados por created_at_local ascendente (criterio HU-14).
+   * Obtiene registros pendientes de sincronización con sus insumos, ordenados
+   * por created_at_local ascendente (criterio HU-14).
+   *
+   * `offset` saltea los que ya fallaron en la ronda en curso: siguen
+   * pendientes (M-003) y sin él la ronda los volvería a pedir para siempre.
    */
-  async getPendientes(limit = 10): Promise<CreateRegistroLaborDto[]> {
+  async getPendientes(limit = 10, offset = 0): Promise<CreateRegistroLaborDto[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<{
       local_uuid: string;
@@ -190,9 +195,9 @@ export const laboresRepo = {
       `SELECT local_uuid, cuartel_id, tipo_labor_id, fecha, cantidad, created_at_local
        FROM registro_labor
        WHERE estado_sync = ?
-       ORDER BY created_at_local ASC
-       LIMIT ?`,
-      [EstadoSync.PENDIENTE, limit],
+       ORDER BY created_at_local ASC, local_uuid ASC
+       LIMIT ? OFFSET ?`,
+      [EstadoSync.PENDIENTE, limit, offset],
     );
 
     const result: CreateRegistroLaborDto[] = [];
@@ -251,15 +256,18 @@ export const laboresRepo = {
   },
 
   /**
-   * Marca un registro con error de sincronización.
+   * Registra un intento de sincronización fallido (M-003).
+   *
+   * El registro sigue pendiente: el motor lo reintenta solo. Se guarda el
+   * mensaje para que el capataz vea por qué no sube y pueda corregirlo.
    */
-  async markError(localUuid: string, errorMessage: string): Promise<void> {
+  async registrarIntentoFallido(localUuid: string, errorMessage: string): Promise<void> {
     const db = await getDatabase();
     await db.runAsync(
       `UPDATE registro_labor
-       SET estado_sync = ?, error_message = ?
+       SET estado_sync = ?, error_message = ?, intentos_sync = intentos_sync + 1
        WHERE local_uuid = ?`,
-      [EstadoSync.ERROR, errorMessage, localUuid],
+      [EstadoSync.PENDIENTE, errorMessage, localUuid],
     );
   },
 
@@ -316,6 +324,7 @@ export const laboresRepo = {
       cantidad: number;
       estado_sync: string;
       error_message: string | null;
+      intentos_sync: number;
       created_at_local: string;
       created_at: string;
       server_id: string | null;
@@ -333,6 +342,7 @@ export const laboresRepo = {
       cantidad: r.cantidad,
       estadoSync: r.estado_sync as EstadoSync,
       errorMessage: r.error_message,
+      intentosSync: r.intentos_sync,
       createdAtLocal: r.created_at_local,
       createdAt: r.created_at,
       serverId: r.server_id,

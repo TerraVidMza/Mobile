@@ -26,6 +26,7 @@ import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { useCatalogosStore } from '../../../stores/catalogos.store';
 import { useSyncStore } from '../../../stores/sync.store';
+import { syncEngine } from '../../../sync/sync-engine';
 import { laboresRepo } from '../../../db/repositories/labores.repo';
 import { InsumoSelector } from '../../../components/forms/InsumoSelector';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
@@ -124,6 +125,8 @@ export default function NuevaLaborScreen() {
       );
 
       incrementPending(1);
+      // Con señal sube en el momento; sin señal queda pendiente (M-003).
+      if (useSyncStore.getState().isConnected) void syncEngine.runSync();
       await haptics.success();
 
       Alert.alert(

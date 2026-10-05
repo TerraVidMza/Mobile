@@ -25,6 +25,7 @@ import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { useCatalogosStore } from '../../../stores/catalogos.store';
 import { useSyncStore } from '../../../stores/sync.store';
+import { syncEngine } from '../../../sync/sync-engine';
 import { pesajesRepo } from '../../../db/repositories/pesajes.repo';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
@@ -117,6 +118,8 @@ export default function NuevoPesajeScreen() {
       });
 
       incrementPending(1);
+      // Con señal sube en el momento; sin señal queda pendiente (M-003).
+      if (useSyncStore.getState().isConnected) void syncEngine.runSync();
       await haptics.success();
 
       Alert.alert(

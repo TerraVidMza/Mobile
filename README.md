@@ -49,9 +49,13 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 
 1. **Idempotencia con `local_uuid`**: Cada registro de labor o pesaje genera un UUID v4 en el dispositivo antes de guardarse en SQLite. Al sincronizar con el Backend, un registro repetido devuelve `200 OK` sin duplicar filas.
 2. **Lotes de 10 registros**: Según HU-14, la sincronización se realiza en lotes de máximo 10 registros por request (`POST /api/registro-labor/sync` y `POST /api/pesajes-vendimia/sync`), ordenados por `createdAtLocal` ascendente.
-3. **Reconexión en ≤5s**: El listener de NetInfo detecta la disponibilidad de internet y dispara automáticamente la sincronización en segundo plano.
-4. **Backoff exponencial**: En caso de fallo de red, reintentos a los 30s, 60s y 120s con jitter de ±10%.
-5. **Fechas locales (D-009)**: Se utiliza el día local de la finca (`YYYY-MM-DD`), sin conversiones UTC intermedias.
+3. **Cuándo se sincroniza**: al recuperar conexión (≤5s), al abrir la app con conexión, al iniciar sesión, al guardar un registro nuevo y con el botón "sincronizar" o el pull-to-refresh.
+4. **Reintento automático (M-003)**: un registro que no sube **sigue pendiente**, con el motivo y la cantidad de intentos. El motor reintenta a los 30s, 60s y 120s (jitter ±10%); después espera al próximo disparador. Si el backend rechaza el lote entero, se envían de a uno para que un registro con problemas no frene al resto.
+5. **Contrato con el backend**: los tipos de `src/types/api.types.ts` espejan los DTO del backend. El pesaje se guarda localmente como `peso_kg` y viaja como `kgTotales`; el resultado de `/sync` trae `estado`, `registroId`/`pesajeId` y `errorMessage`.
+6. **Base local**: SQLite nativo en Android/iOS y SQLite compilado a WebAssembly (sql.js, persistido en IndexedDB) en la PWA (M-001). El esquema evoluciona con migraciones versionadas (M-002).
+7. **Fechas locales (D-009)**: Se utiliza el día local de la finca (`YYYY-MM-DD`), sin conversiones UTC intermedias.
+
+Las decisiones de diseño propias de Mobile están en [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ---
 
@@ -70,13 +74,15 @@ src/
 │   └── sync/                     # SyncStatusBar y OfflineBanner
 ├── config/env.ts                 # Variables de entorno y constantes de sync
 ├── db/
-│   ├── database.ts               # Singleton SQLite con WAL mode y FKs
-│   ├── schema.ts                 # DDL de catálogos y registros offline
+│   ├── database.ts               # Apertura: expo-sqlite (nativo) o sql.js (web) — M-001
+│   ├── schema.ts                 # DDL base (versión 1) de catálogos y registros offline
+│   ├── migrations.ts             # Migraciones versionadas del esquema — M-002
+│   ├── web-database.ts           # Adaptador sql.js + IndexedDB para la PWA
 │   └── repositories/             # CRUD tipado (labores, pesajes, catálogos)
 ├── hooks/useNotificaciones.ts    # Registro de tokens FCM
 ├── services/                     # Clientes API tipados (auth, labores, pesajes, catálogos, notificaciones)
 ├── stores/                       # Zustand stores (auth, sync, catálogos)
-├── sync/                         # Motor de sincronización (engine, batches, monitor, retry)
+├── sync/                         # Motor de sincronización (engine, lotes, monitor, reintentos)
 ├── types/api.types.ts            # DTOs y tipos espejo del Backend
 └── utils/                        # fecha-local (D-009), validadores Zod
 ```
