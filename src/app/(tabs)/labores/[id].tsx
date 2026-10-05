@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   Text,
   Card,
@@ -20,6 +20,7 @@ import { haptics } from '../../../utils/haptics';
 import { EstadoSyncChip } from '../../../components/sync/EstadoSyncChip';
 import { EstadoSync } from '../../../types/api.types';
 import type { DetalleInsumoLocal, RegistroLaborLocal } from '../../../types/api.types';
+import { confirmar } from '../../../utils/dialogos';
 
 type LaborDetail = RegistroLaborLocal & {
   cuartelNombre: string;
@@ -74,23 +75,17 @@ export default function DetalleLaborScreen() {
 
   async function handleEliminar() {
     if (!id) return;
-    Alert.alert(
-      'Eliminar Registro',
-      '¿Estás seguro de que deseás eliminar este registro local?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            await laboresRepo.deleteLabor(id);
-            await syncEngine.updatePendingCount();
-            await haptics.selection();
-            router.back();
-          },
-        },
-      ],
-    );
+    const eliminar = await confirmar({
+      titulo: 'Eliminar registro',
+      mensaje: '¿Querés eliminar este registro del teléfono? Todavía no se sincronizó.',
+      textoConfirmar: 'Eliminar',
+      destructivo: true,
+    });
+    if (!eliminar) return;
+    await laboresRepo.deleteLabor(id);
+    await syncEngine.updatePendingCount();
+    await haptics.selection();
+    router.back();
   }
 
   if (loading) {

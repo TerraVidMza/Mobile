@@ -12,6 +12,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-003 | Reintento automático: lo que no sube queda pendiente | ✅ Implementada |
 | M-004 | Sesión con refresh token que sobrevive al trabajo offline | ✅ Implementada |
 | M-005 | La app la usa quien tiene permiso, no un rol fijo | ✅ Implementada |
+| M-006 | Correcciones para que la PWA y las notificaciones funcionen | ✅ Implementada |
 
 ---
 
@@ -174,3 +175,27 @@ lista de roles en la app.
   muestran según `laboresRegistro` y `pesajesRegistro`. Hoy los tres roles con
   acceso tienen los dos permisos, pero la app no asume la tabla de roles:
   sigue lo que manda el backend.
+
+## M-006 — Correcciones para que la PWA y las notificaciones funcionen
+
+Errores que impedían usar partes de la app, encontrados en la revisión del
+2026-10-05:
+
+- **`Alert.alert` no hace nada en react-native-web.** En la PWA, guardar una
+  labor o un pesaje no volvía a la lista (el `router.back()` estaba en el botón
+  del alerta) y "Eliminar registro" no eliminaba nada. `src/utils/dialogos.ts`
+  ofrece `avisar()` y `confirmar()`, que devuelven promesas y en web usan
+  `window.alert` / `window.confirm`.
+- **Notificaciones: nunca cargaban.** El servicio mandaba `?limit=20` y el
+  backend rechaza con 400 cualquier parámetro que no conoce (espera
+  `pageSize`). El `catch` vacío escondía el error. Además la paginación no
+  avanzaba nunca. Ahora pide `pageSize`, trae la página siguiente al llegar al
+  final (`onEndReached`), muestra el error si falla y, al tocar una
+  notificación, la marca leída y abre la pantalla de su `urlAccion` cuando la
+  app la tiene (labores o pesaje).
+- **Cambio de contraseña obligatorio.** La pantalla mutaba el objeto `user` en
+  el lugar: el store no se enteraba y lo guardado seguía diciendo que la
+  contraseña era temporal. Además el control solo redirigía al salir del login,
+  así que una sesión restaurada con contraseña temporal entraba a las
+  pestañas. Ahora `marcarPasswordCambiada()` actualiza el store y lo guardado,
+  y el control redirige desde cualquier pantalla.

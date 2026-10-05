@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   Text,
   TextInput,
@@ -33,6 +33,7 @@ import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, DetalleInsumoDto } from '../../../types/api.types';
+import { avisar } from '../../../utils/dialogos';
 
 export default function NuevaLaborScreen() {
   const theme = useTheme();
@@ -129,14 +130,15 @@ export default function NuevaLaborScreen() {
       if (useSyncStore.getState().isConnected) void syncEngine.runSync();
       await haptics.success();
 
-      Alert.alert(
-        'Labor Guardada',
-        'El registro se guardó localmente y se sincronizará automáticamente.',
-        [{ text: 'Aceptar', onPress: () => router.back() }],
+      // Con Alert.alert el `router.back()` no corría en la PWA (M-006).
+      await avisar(
+        'Labor guardada',
+        'El registro se guardó en el teléfono y se sincroniza automáticamente.',
       );
+      router.back();
     } catch {
       await haptics.error();
-      Alert.alert('Error', 'No se pudo guardar el registro localmente.');
+      void avisar('Error', 'No se pudo guardar el registro en el teléfono.');
     } finally {
       setSaving(false);
     }

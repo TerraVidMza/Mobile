@@ -46,6 +46,8 @@ interface AuthState {
   clearSession: () => void;
   /** Limpia el error de login. */
   clearLoginError: () => void;
+  /** La contraseña temporal ya se cambió: se actualiza el store y lo guardado. */
+  marcarPasswordCambiada: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -181,6 +183,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearLoginError: () => {
     set({ loginError: null });
+  },
+
+  marcarPasswordCambiada: async () => {
+    const user = get().user;
+    if (!user) return;
+    const actualizado = { ...user, debeCambiarPassword: false };
+    // Persistido: si no, la próxima apertura de la app volvía a pedirla.
+    await secureStorage.setItem('user', JSON.stringify(actualizado));
+    set({ user: actualizado, debeCambiarPassword: false });
   },
 }));
 

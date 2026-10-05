@@ -160,9 +160,13 @@ export interface Notificacion {
   createdAt: string;
 }
 
+/** Envelope paginado del backend más el contador de no leídas. */
 export interface NotificacionesResponse {
   data: Notificacion[];
   total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
   noLeidas: number;
 }
 

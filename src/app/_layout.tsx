@@ -105,10 +105,16 @@ function useProtectedRoute(isMounted: boolean) {
     if (!isMounted || isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const enCambioPassword = segments[0] === 'cambiar-password';
 
     const timer = setTimeout(() => {
       if (!isAuthenticated && !inAuthGroup) {
         router.replace('/(auth)/login');
+      } else if (isAuthenticated && debeCambiarPassword && !enCambioPassword) {
+        // Desde cualquier pantalla, no solo al salir del login: una sesión
+        // restaurada con la contraseña temporal entraba directo a las pestañas
+        // (M-006).
+        router.replace('/cambiar-password');
       } else if (isAuthenticated && inAuthGroup) {
         if (debeCambiarPassword) {
           router.replace('/cambiar-password');

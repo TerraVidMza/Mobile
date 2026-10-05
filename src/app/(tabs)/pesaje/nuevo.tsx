@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   Text,
   TextInput,
@@ -31,6 +31,7 @@ import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, Cuadrilla } from '../../../types/api.types';
+import { avisar } from '../../../utils/dialogos';
 
 export default function NuevoPesajeScreen() {
   const theme = useTheme();
@@ -122,14 +123,14 @@ export default function NuevoPesajeScreen() {
       if (useSyncStore.getState().isConnected) void syncEngine.runSync();
       await haptics.success();
 
-      Alert.alert(
-        'Pesaje Guardado',
-        'El pesaje se guardó localmente y se sincronizará automáticamente.',
-        [{ text: 'Aceptar', onPress: () => router.back() }],
+      await avisar(
+        'Pesaje guardado',
+        'El pesaje se guardó en el teléfono y se sincroniza automáticamente.',
       );
+      router.back();
     } catch {
       await haptics.error();
-      Alert.alert('Error', 'No se pudo guardar el pesaje localmente.');
+      void avisar('Error', 'No se pudo guardar el pesaje en el teléfono.');
     } finally {
       setSaving(false);
     }

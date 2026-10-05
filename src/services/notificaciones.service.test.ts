@@ -19,13 +19,13 @@ describe('notificacionesService (100% Coverage)', () => {
 
     const res1 = await notificacionesService.getMine(1, 20, false);
     expect(api.get).toHaveBeenCalledWith('/notificaciones', {
-      params: { page: 1, limit: 20, soloNoLeidas: undefined },
+      params: { page: 1, pageSize: 20, soloNoLeidas: undefined },
     });
     expect(res1.total).toBe(1);
 
     const res2 = await notificacionesService.getMine(1, 10, true);
     expect(api.get).toHaveBeenCalledWith('/notificaciones', {
-      params: { page: 1, limit: 10, soloNoLeidas: 'true' },
+      params: { page: 1, pageSize: 10, soloNoLeidas: 'true' },
     });
     expect(res2.total).toBe(1);
   });

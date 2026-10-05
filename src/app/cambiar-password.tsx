@@ -20,7 +20,7 @@ interface ChangePasswordForm {
 export default function CambiarPasswordScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { logout, marcarPasswordCambiada } = useAuthStore();
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,10 +40,9 @@ export default function CambiarPasswordScreen() {
     setServerError(null);
     try {
       await authService.changePassword(data);
-      // Actualiza estado y redirige
-      if (user) {
-        user.debeCambiarPassword = false;
-      }
+      // Antes mutaba el objeto `user` en el lugar: el store no se enteraba y
+      // el valor guardado seguía diciendo que la contraseña era temporal.
+      await marcarPasswordCambiada();
       router.replace('/(tabs)');
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error) {
