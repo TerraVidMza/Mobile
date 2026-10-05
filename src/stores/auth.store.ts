@@ -20,6 +20,7 @@ import {
 import { catalogosSyncService } from '../services/catalogos-sync.service';
 import { useCatalogosStore } from './catalogos.store';
 import type { AuthUser } from '../types/api.types';
+import { MENSAJE_SIN_ACCESO_MOVIL, puede } from '../utils/permisos';
 
 interface AuthState {
   /** Usuario autenticado, null si no hay sesión. */
@@ -60,6 +61,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const response = await authService.login({ email, password });
 
+      // El backend ya lo rechaza con 403; esto cubre a un backend anterior a
+      // D-024, que no conoce `cliente` (M-005).
+      if (!puede(response.user, 'appMovil')) {
+        set({ loginError: MENSAJE_SIN_ACCESO_MOVIL });
+        throw new Error(MENSAJE_SIN_ACCESO_MOVIL);
+      }
+
       // Tokens y usuario en almacenamiento seguro, para restaurar la sesión
       // en el próximo arranque aunque no haya señal.
       await guardarSesion(response);
@@ -86,6 +94,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // próximo pull-to-refresh o reconexión, que sí reintentan la sync.
       }
     } catch (error: unknown) {
+      if (error instanceof Error && error.message === MENSAJE_SIN_ACCESO_MOVIL) {
+        throw error;
+      }
       let message = 'Error de conexión. Intentá nuevamente.';
 
       if (error && typeof error === 'object' && 'response' in error) {
@@ -94,6 +105,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (status === 401) {
           message = 'Email o contraseña incorrectos';
+        } else if (status === 403) {
+          message = axiosError.response.data?.message ?? MENSAJE_SIN_ACCESO_MOVIL;
         } else if (status === 429) {
           message = axiosError.response.data?.message
             ?? 'Cuenta bloqueada por demasiados intentos. Intentá en 15 minutos';
@@ -137,8 +150,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const accessVigente = !vence || vence > new Date();
       const sesionUtilizable = accessVigente || (await puedeRenovar());
 
-      if (token && userStr && sesionUtilizable) {
-        const user: AuthUser = JSON.parse(userStr);
+      const user: AuthUser | null = userStr ? JSON.parse(userStr) : null;
+      // Una sesión guardada antes de D-024 no trae permisos: se pide login para
+      // obtenerlos. Lo mismo si el rol perdió el acceso a la app (M-005).
+      if (token && user && sesionUtilizable && puede(user, 'appMovil')) {
         set({
           user,
           token,

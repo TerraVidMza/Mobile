@@ -28,6 +28,7 @@ describe('useAuthStore (100% Coverage)', () => {
       rol: 'Capataz' as any,
       empresaId: 'emp-1',
       debeCambiarPassword: true,
+      permisos: ['appMovil', 'laboresRegistro', 'pesajesRegistro'],
     };
 
     (authService.login as jest.Mock).mockResolvedValue({
@@ -89,6 +90,7 @@ describe('useAuthStore (100% Coverage)', () => {
       rol: 'Capataz' as any,
       empresaId: 'emp-1',
       debeCambiarPassword: false,
+      permisos: ['appMovil', 'laboresRegistro', 'pesajesRegistro'],
     };
 
     (secureStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
@@ -149,6 +151,7 @@ describe('useAuthStore (100% Coverage)', () => {
       rol: 'Capataz',
       empresaId: 'emp-1',
       debeCambiarPassword: false,
+      permisos: ['appMovil', 'laboresRegistro', 'pesajesRegistro'],
     };
     const jwt = (exp: number) =>
       `x.${Buffer.from(JSON.stringify({ exp })).toString('base64url')}.y`;
@@ -211,6 +214,57 @@ describe('useAuthStore (100% Coverage)', () => {
         'refreshExpiresAt',
         '2099-01-01T00:00:00.000Z',
       );
+    });
+  });
+
+  describe('acceso por permiso (M-005)', () => {
+    const auditor = {
+      id: 'u-2',
+      email: 'auditor@terravid.com',
+      rol: 'Auditor',
+      empresaId: 'emp-1',
+      debeCambiarPassword: false,
+      permisos: ['logAuditoria', 'fincas'],
+    };
+
+    it('manda cliente movil y muestra el 403 del backend', async () => {
+      (authService.login as jest.Mock).mockRejectedValue({
+        response: { status: 403, data: { message: 'Tu rol no tiene acceso a la app móvil.' } },
+      });
+
+      await expect(
+        useAuthStore.getState().login('auditor@terravid.com', 'x'),
+      ).rejects.toThrow('Tu rol no tiene acceso a la app móvil.');
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    });
+
+    it('rechaza igual a un rol sin appMovil si el backend no lo frenó', async () => {
+      (authService.login as jest.Mock).mockResolvedValue({
+        accessToken: 'a',
+        expiresIn: 900,
+        refreshToken: 'r',
+        refreshExpiresAt: '2099-01-01T00:00:00.000Z',
+        user: auditor,
+      });
+
+      await expect(
+        useAuthStore.getState().login('auditor@terravid.com', 'x'),
+      ).rejects.toThrow(/app móvil/);
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+      expect(secureStorage.setItem).not.toHaveBeenCalled();
+    });
+
+    it('una sesión guardada sin permisos pide login', async () => {
+      const { permisos: _sinPermisos, ...viejo } = auditor;
+      (secureStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
+        if (key === 'accessToken') return 'token-sin-exp';
+        if (key === 'user') return JSON.stringify({ ...viejo, rol: 'Capataz' });
+        return null;
+      });
+
+      await useAuthStore.getState().restore();
+
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
   });
 });

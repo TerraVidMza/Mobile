@@ -32,7 +32,7 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 
 | HU | Funcionalidad | Pantalla / Módulo | Estado |
 |---|---|---|---|
-| **HU-01** | Iniciar sesión (JWT + refresh token, M-004) | `(auth)/login` | Completa |
+| **HU-01** | Iniciar sesión (JWT + refresh token, M-004; acceso por permiso `appMovil`, M-005) | `(auth)/login` | Completa |
 | **HU-02** | Cerrar sesión (revocación de token) | `(tabs)/index` (Logout) | Completa |
 | **HU-03** | Recuperar contraseña | `(auth)/forgot-password`, `(auth)/reset-password` | Completa |
 | **HU-04** | Cambiar contraseña | `cambiar-password` | Completa |

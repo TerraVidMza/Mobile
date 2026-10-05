@@ -11,6 +11,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-002 | Migraciones versionadas del esquema local | ✅ Implementada |
 | M-003 | Reintento automático: lo que no sube queda pendiente | ✅ Implementada |
 | M-004 | Sesión con refresh token que sobrevive al trabajo offline | ✅ Implementada |
+| M-005 | La app la usa quien tiene permiso, no un rol fijo | ✅ Implementada |
 
 ---
 
@@ -152,3 +153,24 @@ expulsaría al capataz cada vez que vuelve a tener señal.
   de su empresa (7 días por defecto, configurable hasta 30 en la Web).
 - Las sesiones guardadas antes de esta versión no tienen refresh token: duran
   lo que les queda al access y después piden login.
+
+## M-005 — La app la usa quien tiene permiso, no un rol fijo
+
+**Contexto.** Cualquier rol podía iniciar sesión en la app, aunque solo sirve
+para registrar labores y pesajes. Un Auditor entraba y veía formularios que el
+backend le iba a rechazar. El product owner pidió que la app sea para quien
+tenga permiso de hacer lo que permite, manejado como permiso y no como una
+lista de roles en la app.
+
+**Decisión** (D-024 del backend).
+- El login manda `cliente: 'movil'`. El backend responde **403** si el rol no
+  tiene `appMovil` (la unión de `laboresRegistro` y `pesajesRegistro`), y la
+  app muestra ese mensaje.
+- La app lo verifica también con `user.permisos`, por si el backend es
+  anterior a D-024 y no conoce `cliente`.
+- Una sesión guardada sin `permisos` (anterior a este cambio) o sin
+  `appMovil` pide iniciar sesión de nuevo.
+- Las pestañas *Labores* y *Pesaje*, y sus accesos rápidos del inicio, se
+  muestran según `laboresRegistro` y `pesajesRegistro`. Hoy los tres roles con
+  acceso tienen los dos permisos, pero la app no asume la tabla de roles:
+  sigue lo que manda el backend.

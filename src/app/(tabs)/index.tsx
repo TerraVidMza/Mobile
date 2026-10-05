@@ -13,6 +13,7 @@ import { Card, Text, Button, Chip, useTheme } from 'react-native-paper';
 import { useRouter, useFocusEffect } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuthStore } from '../../stores/auth.store';
+import { puede } from '../../utils/permisos';
 import { useSyncStore } from '../../stores/sync.store';
 import { syncEngine } from '../../sync/sync-engine';
 import { haptics } from '../../utils/haptics';
@@ -49,7 +50,8 @@ export default function HomeScreen() {
           </View>
           {pendingCount > 0 && (
             <Chip icon="sync" style={{ marginTop: 12 }}>
-              {pendingCount} registro{pendingCount !== 1 ? 's' : ''} pendiente{pendingCount !== 1 ? 's' : ''}
+              {pendingCount} registro{pendingCount !== 1 ? 's' : ''} pendiente
+              {pendingCount !== 1 ? 's' : ''}
             </Chip>
           )}
           {status === 'syncing' && (
@@ -73,43 +75,51 @@ export default function HomeScreen() {
         Acciones rápidas
       </Text>
 
-      <Card
-        style={styles.actionCard}
-        onPress={() => {
-          haptics.selection();
-          router.push('/(tabs)/labores/nueva');
-        }}
-      >
-        <Card.Content style={styles.actionContent}>
-          <MaterialCommunityIcons name="clipboard-plus-outline" size={32} color={theme.colors.primary} />
-          <View style={styles.actionText}>
-            <Text variant="titleMedium">Registrar labor</Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              Cargar labores del día en el cuartel
-            </Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.colors.outline} />
-        </Card.Content>
-      </Card>
+      {puede(user, 'laboresRegistro') && (
+        <Card
+          style={styles.actionCard}
+          onPress={() => {
+            haptics.selection();
+            router.push('/(tabs)/labores/nueva');
+          }}
+        >
+          <Card.Content style={styles.actionContent}>
+            <MaterialCommunityIcons
+              name="clipboard-plus-outline"
+              size={32}
+              color={theme.colors.primary}
+            />
+            <View style={styles.actionText}>
+              <Text variant="titleMedium">Registrar labor</Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                Cargar labores del día en el cuartel
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.colors.outline} />
+          </Card.Content>
+        </Card>
+      )}
 
-      <Card
-        style={styles.actionCard}
-        onPress={() => {
-          haptics.selection();
-          router.push('/(tabs)/pesaje/nuevo');
-        }}
-      >
-        <Card.Content style={styles.actionContent}>
-          <MaterialCommunityIcons name="scale" size={32} color={theme.colors.secondary} />
-          <View style={styles.actionText}>
-            <Text variant="titleMedium">Registrar pesaje</Text>
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              Cargar kilos cosechados por cuadrilla
-            </Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.colors.outline} />
-        </Card.Content>
-      </Card>
+      {puede(user, 'pesajesRegistro') && (
+        <Card
+          style={styles.actionCard}
+          onPress={() => {
+            haptics.selection();
+            router.push('/(tabs)/pesaje/nuevo');
+          }}
+        >
+          <Card.Content style={styles.actionContent}>
+            <MaterialCommunityIcons name="scale" size={32} color={theme.colors.secondary} />
+            <View style={styles.actionText}>
+              <Text variant="titleMedium">Registrar pesaje</Text>
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                Cargar kilos cosechados por cuadrilla
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.colors.outline} />
+          </Card.Content>
+        </Card>
+      )}
 
       {/* Cerrar sesión */}
       <Button

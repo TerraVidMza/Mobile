@@ -42,6 +42,7 @@ describe('AuthGuard & Session Security Integration Test', () => {
         rol: RolNombre.CAPATAZ,
         empresaId: 'emp-1',
         debeCambiarPassword: true,
+        permisos: ['appMovil', 'laboresRegistro', 'pesajesRegistro'],
       },
     });
 
@@ -67,6 +68,7 @@ describe('AuthGuard & Session Security Integration Test', () => {
         rol: RolNombre.CAPATAZ,
         empresaId: 'emp-1',
         debeCambiarPassword: false,
+        permisos: ['appMovil', 'laboresRegistro', 'pesajesRegistro'],
       },
       token: 'jwt-expired-token',
       isAuthenticated: true,

@@ -28,6 +28,8 @@ export enum EstadoSync {
 export interface LoginRequest {
   email: string;
   password: string;
+  /** La app se identifica para que el backend exija el permiso `appMovil`. */
+  cliente?: 'web' | 'movil';
 }
 
 /** Respuesta de `POST /auth/login` y de `POST /auth/refresh` (D-023 del backend). */
@@ -48,6 +50,8 @@ export interface AuthUser {
   rol: RolNombre;
   empresaId: string;
   debeCambiarPassword: boolean;
+  /** Capacidades del rol, definidas por el backend (D-024). */
+  permisos: string[];
 }
 
 export interface ForgotPasswordRequest {
