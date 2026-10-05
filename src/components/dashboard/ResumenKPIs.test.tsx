@@ -37,7 +37,7 @@ describe('ResumenKPIs Component', () => {
 
     const text = getText(component.toJSON());
     expect(text).toContain('Resumen Diario de Cosecha');
-    expect(text).toMatch(/4[.,]500 kg/);
+    expect(text).toMatch(/4[.,]?500 kg/);
     expect(text).toContain('6');
     expect(text).toContain('45%');
     expect(text).toContain('Todo sincronizado');

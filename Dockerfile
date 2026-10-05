@@ -2,6 +2,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
+# El postinstall copia el .wasm de sql.js a public/ (M-001)
+COPY scripts ./scripts
 RUN npm ci
 COPY . .
 ENV NODE_ENV=production

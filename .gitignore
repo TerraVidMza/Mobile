@@ -57,3 +57,5 @@ AGENTS.md
 
 expo-env.d.ts
 # @end expo-cli
+# sql.js: lo copia el postinstall (M-001)
+public/sqljs/
