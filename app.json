@@ -29,7 +29,11 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
       ]
     },
     "web": {
@@ -48,7 +52,19 @@
         }
       ],
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TerraVid guarda dónde registrás cada labor y pesaje, si lo permitís."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "TerraVid usa Face ID para desbloquear tu sesión."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

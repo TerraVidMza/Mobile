@@ -126,6 +126,9 @@ export interface CreateRegistroLaborDto {
   cantidad: number;        // > 0
   insumos: DetalleInsumoDto[];
   createdAtLocal?: string; // ISO 8601 con timezone
+  /** Ubicación al registrar, si hubo GPS (D-027). */
+  latitud?: number;
+  longitud?: number;
 }
 
 /** Espejo de SyncRegistroLaborDto del backend. */
@@ -142,6 +145,8 @@ export interface CreatePesajeDto {
   fecha: string;
   kgTotales: number;       // > 0 (localmente se guarda como peso_kg)
   createdAtLocal?: string;
+  latitud?: number;
+  longitud?: number;
 }
 
 export interface SyncPesajeDto {
@@ -212,6 +217,9 @@ export interface RegistroLaborLocal {
   serverId: string | null;
   /** Intentos de sincronización fallidos (M-003). */
   intentosSync: number;
+  /** Ubicación al registrar (M-009); null si no hubo GPS. */
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export interface DetalleInsumoLocal {
@@ -235,4 +243,7 @@ export interface PesajeVendimiaLocal {
   serverId: string | null;
   /** Intentos de sincronización fallidos (M-003). */
   intentosSync: number;
+  /** Ubicación al registrar (M-009); null si no hubo GPS. */
+  latitud?: number | null;
+  longitud?: number | null;
 }

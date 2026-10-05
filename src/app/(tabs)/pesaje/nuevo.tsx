@@ -32,6 +32,7 @@ import { haptics } from '../../../utils/haptics';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, Cuadrilla } from '../../../types/api.types';
 import { avisar } from '../../../utils/dialogos';
+import { capturarCoordenadasGPS } from '../../../utils/location';
 
 export default function NuevoPesajeScreen() {
   const theme = useTheme();
@@ -106,6 +107,8 @@ export default function NuevoPesajeScreen() {
     try {
       const localUuid = Crypto.randomUUID();
       const createdAtLocal = timestampLocal();
+      // Opcional: sin permiso o sin señal se guarda igual (M-009).
+      const gps = await capturarCoordenadasGPS();
 
       await pesajesRepo.createPesaje({
         localUuid,
@@ -116,6 +119,8 @@ export default function NuevoPesajeScreen() {
         estadoSync: EstadoSync.PENDIENTE,
         errorMessage: null,
         createdAtLocal,
+        latitud: gps?.latitud ?? null,
+        longitud: gps?.longitud ?? null,
       });
 
       incrementPending(1);

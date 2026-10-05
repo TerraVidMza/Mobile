@@ -21,6 +21,7 @@ import { catalogosSyncService } from '../services/catalogos-sync.service';
 import { useCatalogosStore } from './catalogos.store';
 import type { AuthUser } from '../types/api.types';
 import { MENSAJE_SIN_ACCESO_MOVIL, puede } from '../utils/permisos';
+import { BiometricsService } from '../services/biometrics.service';
 
 interface AuthState {
   /** Usuario autenticado, null si no hay sesión. */
@@ -35,6 +36,11 @@ interface AuthState {
   isLoading: boolean;
   /** Mensaje de error del último intento de login. */
   loginError: string | null;
+  /**
+   * Sesión restaurada que espera el desbloqueo biométrico (M-007). Mientras
+   * es true la app muestra la pantalla de bloqueo y no las pestañas.
+   */
+  bloqueada: boolean;
 
   /** Intenta login con email y password. */
   login: (email: string, password: string) => Promise<void>;
@@ -46,6 +52,8 @@ interface AuthState {
   clearSession: () => void;
   /** Limpia el error de login. */
   clearLoginError: () => void;
+  /** El usuario superó la verificación biométrica. */
+  desbloquear: () => void;
   /** La contraseña temporal ya se cambió: se actualiza el store y lo guardado. */
   marcarPasswordCambiada: () => Promise<void>;
 }
@@ -57,6 +65,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   debeCambiarPassword: false,
   isLoading: true,
   loginError: null,
+  bloqueada: false,
 
   login: async (email, password) => {
     set({ loginError: null });
@@ -136,7 +145,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         debeCambiarPassword: false,
         loginError: null,
+        bloqueada: false,
       });
+      // El desbloqueo es de esta sesión: otra persona que entre en el mismo
+      // teléfono no tiene que heredarlo.
+      await BiometricsService.deshabilitar();
     }
   },
 
@@ -156,12 +169,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Una sesión guardada antes de D-024 no trae permisos: se pide login para
       // obtenerlos. Lo mismo si el rol perdió el acceso a la app (M-005).
       if (token && user && sesionUtilizable && puede(user, 'appMovil')) {
+        // Con el desbloqueo activado, la sesión se restaura bloqueada.
+        const bloqueada = await BiometricsService.estaHabilitada();
         set({
           user,
           token,
           isAuthenticated: true,
           debeCambiarPassword: user.debeCambiarPassword,
           isLoading: false,
+          bloqueada,
         });
         return;
       }
@@ -184,6 +200,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   clearLoginError: () => {
     set({ loginError: null });
   },
+
+  desbloquear: () => set({ bloqueada: false }),
 
   marcarPasswordCambiada: async () => {
     const user = get().user;

@@ -13,6 +13,11 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-004 | Sesión con refresh token que sobrevive al trabajo offline | ✅ Implementada |
 | M-005 | La app la usa quien tiene permiso, no un rol fijo | ✅ Implementada |
 | M-006 | Correcciones para que la PWA y las notificaciones funcionen | ✅ Implementada |
+| M-007 | Desbloqueo biométrico local de la sesión guardada | ✅ Implementada |
+| M-008 | Modo solar y respaldo a archivo | ✅ Implementada |
+| M-009 | Ubicación GPS opcional de cada registro | ✅ Implementada |
+| M-010 | Avance de cosecha contra la meta de la campaña | ✅ Implementada |
+| M-011 | PWA instalable que abre sin señal | ✅ Implementada |
 
 ---
 
@@ -199,3 +204,77 @@ Errores que impedían usar partes de la app, encontrados en la revisión del
   así que una sesión restaurada con contraseña temporal entraba a las
   pestañas. Ahora `marcarPasswordCambiada()` actualiza el store y lo guardado,
   y el control redirige desde cualquier pantalla.
+
+## M-007 — Desbloqueo biométrico local de la sesión guardada
+
+**Contexto.** `BiometricsService.autenticar()` devolvía `true` sin pedir nada
+cuando el navegador conocía `PublicKeyCredential`, y nadie lo usaba.
+
+**Decisión.** Es un **desbloqueo local**: la sesión (M-004) ya está en el
+teléfono y la huella solo decide si se puede usar al abrir la app. No
+reemplaza la contraseña en el servidor.
+
+- **Android / iOS:** `expo-local-authentication` (huella, rostro o PIN del
+  dispositivo como respaldo).
+- **PWA:** WebAuthn con autenticador de plataforma. Al activarlo se crea una
+  credencial; al desbloquear se pide esa credencial con
+  `userVerification: 'required'`. No hay servidor que verifique la firma: es el
+  mismo nivel de confianza que la verificación local de Android.
+- Se activa en *Inicio → Ajustes* y pide la verificación en el momento: no se
+  activa algo que no se probó.
+- Con el desbloqueo activo, `restore()` deja la sesión **bloqueada** y el
+  layout muestra `PantallaBloqueo`, que pide la huella sola. *Ingresar con
+  contraseña* cierra la sesión.
+- Cerrar sesión desactiva el desbloqueo: otra persona que entre en el mismo
+  teléfono no lo hereda.
+
+## M-008 — Modo solar y respaldo a archivo
+
+- **Modo solar:** el store existía pero el layout lo ignoraba y el modo no se
+  restauraba. Ahora el layout usa el tema solar cuando está elegido y
+  `restaurar()` lo recupera al abrir. Se activa en *Ajustes*.
+- **Respaldo:** antes armaba el JSON en memoria y no lo guardaba. Ahora exporta
+  **todos** los registros del teléfono (no solo los de hoy), sincronizados o
+  no, con la cantidad de pendientes. En Android escribe el archivo y abre el
+  menú de compartir (`expo-file-system` + `expo-sharing`); en la PWA lo
+  descarga. El nombre usa la fecha local (D-009); antes usaba UTC.
+
+## M-009 — Ubicación GPS opcional de cada registro
+
+- Al guardar una labor o un pesaje se pide la ubicación: `expo-location` en
+  nativo (pide permiso la primera vez) y `navigator.geolocation` en la PWA. La
+  versión anterior usaba `navigator.geolocation` también en nativo, donde no
+  existe.
+- **Opcional:** sin permiso, sin señal o si tarda más de 8 s, el registro se
+  guarda sin coordenadas. Nunca frena la carga.
+- Migración local 3: `latitud` y `longitud` en `registro_labor` y
+  `pesaje_vendimia`. Viajan al backend solo si existen (D-027 del backend).
+
+## M-010 — Avance de cosecha contra la meta de la campaña
+
+- El indicador tenía una meta fija de 10.000 kg en el código. Ahora usa
+  `GET /campanias/actual/avance` (D-027 del backend): la meta que el
+  Propietario carga por cuartel y los kilos pesados en la campaña.
+- La respuesta se guarda en `sync_meta`: sin señal se muestra el último avance
+  conocido, más los kilos pesados en el teléfono que todavía no se
+  sincronizaron (y se aclara).
+- Sin metas cargadas, se muestran los kilos sin inventar un porcentaje.
+
+## M-011 — PWA instalable que abre sin señal
+
+La versión web es el canal para instalar TerraVid sin tiendas.
+
+- `public/manifest.json` con íconos de 192 y 512 px (uno *maskable*) para
+  "Agregar a la pantalla de inicio".
+- `public/sw.js`: la navegación va primero a la red y sin red usa el index
+  guardado; los bundles y estáticos con hash se sirven del caché. La API nunca
+  se cachea. Los datos ya funcionaban offline (M-001).
+- `public/index.html` es la plantilla del export SPA (con `output: single` el
+  `+html.tsx` de expo-router no se usa) y registra el service worker.
+- El servidor no puede cachear `sw.js` ni `index.html`: si no, una versión nueva
+  no llegaría nunca. Se corrigió `nginx.conf` (los cacheaba un año como
+  *immutable*) y el bloque de Caddy en el repo Backend.
+
+**Limitación:** el comportamiento offline del service worker no tiene test
+automatizado (necesita un navegador). Se verificó que el export incluya el
+manifest, el service worker y su registro.

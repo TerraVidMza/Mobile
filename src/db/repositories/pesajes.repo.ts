@@ -24,8 +24,8 @@ export const pesajesRepo = {
     await db.runAsync(
       `INSERT INTO pesaje_vendimia (
         local_uuid, cuadrilla_id, cuartel_id, fecha, peso_kg,
-        estado_sync, error_message, created_at_local
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        estado_sync, error_message, created_at_local, latitud, longitud
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         pesaje.localUuid,
         pesaje.cuadrillaId,
@@ -35,6 +35,8 @@ export const pesajesRepo = {
         pesaje.estadoSync,
         pesaje.errorMessage ?? null,
         pesaje.createdAtLocal,
+        pesaje.latitud ?? null,
+        pesaje.longitud ?? null,
       ],
     );
   },
@@ -156,8 +158,11 @@ export const pesajesRepo = {
       fecha: string;
       peso_kg: number;
       created_at_local: string;
+      latitud: number | null;
+      longitud: number | null;
     }>(
-      `SELECT local_uuid, cuadrilla_id, cuartel_id, fecha, peso_kg, created_at_local
+      `SELECT local_uuid, cuadrilla_id, cuartel_id, fecha, peso_kg, created_at_local,
+              latitud, longitud
        FROM pesaje_vendimia
        WHERE estado_sync = ?
        ORDER BY created_at_local ASC, local_uuid ASC
@@ -173,6 +178,9 @@ export const pesajesRepo = {
       // El backend llama kgTotales a lo que localmente es peso_kg.
       kgTotales: r.peso_kg,
       createdAtLocal: r.created_at_local,
+      ...(r.latitud !== null && r.longitud !== null
+        ? { latitud: r.latitud, longitud: r.longitud }
+        : {}),
     }));
   },
 

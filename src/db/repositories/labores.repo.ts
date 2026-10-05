@@ -23,8 +23,8 @@ export const laboresRepo = {
       await db.runAsync(
         `INSERT INTO registro_labor (
           local_uuid, cuartel_id, tipo_labor_id, fecha, cantidad,
-          estado_sync, error_message, created_at_local
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          estado_sync, error_message, created_at_local, latitud, longitud
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           labor.localUuid,
           labor.cuartelId,
@@ -34,6 +34,8 @@ export const laboresRepo = {
           labor.estadoSync,
           labor.errorMessage ?? null,
           labor.createdAtLocal,
+          labor.latitud ?? null,
+          labor.longitud ?? null,
         ],
       );
 
@@ -191,8 +193,11 @@ export const laboresRepo = {
       fecha: string;
       cantidad: number;
       created_at_local: string;
+      latitud: number | null;
+      longitud: number | null;
     }>(
-      `SELECT local_uuid, cuartel_id, tipo_labor_id, fecha, cantidad, created_at_local
+      `SELECT local_uuid, cuartel_id, tipo_labor_id, fecha, cantidad, created_at_local,
+              latitud, longitud
        FROM registro_labor
        WHERE estado_sync = ?
        ORDER BY created_at_local ASC, local_uuid ASC
@@ -220,6 +225,10 @@ export const laboresRepo = {
         fecha: r.fecha,
         cantidad: r.cantidad,
         createdAtLocal: r.created_at_local,
+        // Solo si hay: el backend rechaza un null donde espera un número.
+        ...(r.latitud !== null && r.longitud !== null
+          ? { latitud: r.latitud, longitud: r.longitud }
+          : {}),
         insumos: insumosRows.map((i) => ({
           insumoId: i.insumo_id,
           cantidad: i.cantidad,

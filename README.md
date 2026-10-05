@@ -43,6 +43,17 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 | **HU-24** | Registro de pesaje diario de vendimia | `(tabs)/pesaje/nuevo`, `(tabs)/pesaje` | Completa |
 | **HU-35** | Notificaciones in-app y push FCM | `(tabs)/notificaciones`, `useNotificaciones` | Completa |
 
+### Funcionalidades de campo (mobile-v2)
+
+| Funcionalidad | Dónde | Decisión |
+|---|---|---|
+| Desbloqueo con huella (Android) o con el autenticador del sistema (PWA, WebAuthn) | Inicio → Ajustes, `PantallaBloqueo` | M-007 |
+| Modo solar (alto contraste) | Inicio → Ajustes | M-008 |
+| Respaldo de todos los registros a un archivo (compartir / descargar) | Inicio → Ajustes | M-008 |
+| Ubicación GPS opcional en labores y pesajes | Al guardar | M-009 |
+| Avance de la cosecha contra la meta de la campaña | Inicio → Resumen del día | M-010 |
+| PWA instalable que abre sin señal | `public/manifest.json`, `public/sw.js` | M-011 |
+
 ---
 
 ## Arquitectura y Protocolo Offline-First

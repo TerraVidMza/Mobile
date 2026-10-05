@@ -31,6 +31,16 @@ export const MIGRACIONES: Migracion[] = [
       `UPDATE pesaje_vendimia SET estado_sync = 'pendiente' WHERE estado_sync = 'error'`,
     ],
   },
+  {
+    version: 3,
+    descripcion: 'Ubicación GPS opcional de labores y pesajes (M-009, D-027)',
+    sentencias: [
+      `ALTER TABLE registro_labor ADD COLUMN latitud REAL`,
+      `ALTER TABLE registro_labor ADD COLUMN longitud REAL`,
+      `ALTER TABLE pesaje_vendimia ADD COLUMN latitud REAL`,
+      `ALTER TABLE pesaje_vendimia ADD COLUMN longitud REAL`,
+    ],
+  },
 ];
 
 /** Versión a la que queda la base después de aplicar todas las migraciones. */

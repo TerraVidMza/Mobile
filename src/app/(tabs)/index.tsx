@@ -17,6 +17,8 @@ import { puede } from '../../utils/permisos';
 import { useSyncStore } from '../../stores/sync.store';
 import { syncEngine } from '../../sync/sync-engine';
 import { haptics } from '../../utils/haptics';
+import { AjustesCampo } from '../../components/ajustes/AjustesCampo';
+import { ResumenKPIs } from '../../components/dashboard/ResumenKPIs';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -120,6 +122,10 @@ export default function HomeScreen() {
           </Card.Content>
         </Card>
       )}
+
+      <ResumenKPIs />
+
+      <AjustesCampo />
 
       {/* Cerrar sesión */}
       <Button

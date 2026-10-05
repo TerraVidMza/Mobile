@@ -34,6 +34,7 @@ import { haptics } from '../../../utils/haptics';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, DetalleInsumoDto } from '../../../types/api.types';
 import { avisar } from '../../../utils/dialogos';
+import { capturarCoordenadasGPS } from '../../../utils/location';
 
 export default function NuevaLaborScreen() {
   const theme = useTheme();
@@ -110,6 +111,8 @@ export default function NuevaLaborScreen() {
     try {
       const localUuid = Crypto.randomUUID();
       const createdAtLocal = timestampLocal();
+      // Opcional: sin permiso o sin señal se guarda igual (M-009).
+      const gps = await capturarCoordenadasGPS();
 
       await laboresRepo.createLabor(
         {
@@ -121,6 +124,8 @@ export default function NuevaLaborScreen() {
           estadoSync: EstadoSync.PENDIENTE,
           errorMessage: null,
           createdAtLocal,
+          latitud: gps?.latitud ?? null,
+          longitud: gps?.longitud ?? null,
         },
         insumosSeleccionados,
       );

@@ -82,4 +82,29 @@ describe('syncPesajesBatch', () => {
     });
     expect(await pesajesRepo.countPendientes()).toBe(1);
   });
+
+  it('manda la ubicación solo si se capturó (M-009)', async () => {
+    await crearPesaje('p-sin', 10);
+    await pesajesRepo.createPesaje({
+      localUuid: 'p-con',
+      cuadrillaId: 'cu-1',
+      cuartelId: 'c-1',
+      fecha: '2026-10-05',
+      pesoKg: 20,
+      estadoSync: EstadoSync.PENDIENTE,
+      errorMessage: null,
+      createdAtLocal: '2026-10-05T09:01:00-03:00',
+      latitud: -33.1,
+      longitud: -68.2,
+    });
+    (pesajeService.sincronizarLote as jest.Mock).mockImplementation(async (pesajes: CreatePesajeDto[]) =>
+      pesajes.map((p) => ({ localUuid: p.localUuid, estado: 'sincronizado', pesajeId: 'x' })),
+    );
+
+    await syncPesajesBatch();
+
+    const enviados = (pesajeService.sincronizarLote as jest.Mock).mock.calls[0][0] as CreatePesajeDto[];
+    expect(enviados.find((p) => p.localUuid === 'p-sin')).not.toHaveProperty('latitud');
+    expect(enviados.find((p) => p.localUuid === 'p-con')).toMatchObject({ latitud: -33.1, longitud: -68.2 });
+  });
 });
