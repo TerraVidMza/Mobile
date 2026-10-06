@@ -15,6 +15,12 @@ import { RolNombre } from '../types/api.types';
 
 jest.mock('../services/auth.service');
 jest.mock('../utils/storage');
+jest.mock('../services/catalogos-sync.service', () => ({
+  catalogosSyncService: { syncAll: jest.fn().mockResolvedValue({ success: true }) },
+}));
+jest.mock('./catalogos.store', () => ({
+  useCatalogosStore: { getState: () => ({ loadFromLocalDb: jest.fn().mockResolvedValue(undefined) }) },
+}));
 
 describe('AuthGuard & Session Security Integration Test', () => {
   beforeEach(() => {
@@ -36,6 +42,7 @@ describe('AuthGuard & Session Security Integration Test', () => {
         rol: RolNombre.CAPATAZ,
         empresaId: 'emp-1',
         debeCambiarPassword: true,
+        permisos: ['appMovil', 'laboresRegistro', 'pesajesRegistro'],
       },
     });
 
@@ -49,8 +56,9 @@ describe('AuthGuard & Session Security Integration Test', () => {
 
   it('debe revocar sesión y borrar tokens cuando el interceptor detecta error 401', async () => {
     // Configurar callback de 401 conectado al store
+    let logoutTerminado: Promise<void> = Promise.resolve();
     registerUnauthorizedCallback(() => {
-      useAuthStore.getState().logout();
+      logoutTerminado = useAuthStore.getState().logout();
     });
 
     useAuthStore.setState({
@@ -60,6 +68,7 @@ describe('AuthGuard & Session Security Integration Test', () => {
         rol: RolNombre.CAPATAZ,
         empresaId: 'emp-1',
         debeCambiarPassword: false,
+        permisos: ['appMovil', 'laboresRegistro', 'pesajesRegistro'],
       },
       token: 'jwt-expired-token',
       isAuthenticated: true,
@@ -69,10 +78,12 @@ describe('AuthGuard & Session Security Integration Test', () => {
     const responseInterceptor = (api.interceptors.response as any).handlers[0].rejected;
     const error401 = {
       response: { status: 401, data: { message: 'Token expired' } },
-      config: { headers: {} },
+      config: { url: '/fincas', headers: {} },
     };
 
     await expect(responseInterceptor(error401)).rejects.toEqual(error401);
+    // El callback dispara el logout sin esperarlo (lo llama un interceptor).
+    await logoutTerminado;
 
     const state = useAuthStore.getState();
     expect(state.isAuthenticated).toBe(false);
@@ -80,5 +91,6 @@ describe('AuthGuard & Session Security Integration Test', () => {
     expect(state.token).toBeNull();
     expect(secureStorage.deleteItem).toHaveBeenCalledWith('accessToken');
     expect(secureStorage.deleteItem).toHaveBeenCalledWith('user');
+    expect(secureStorage.deleteItem).toHaveBeenCalledWith('refreshToken');
   });
 });

@@ -57,3 +57,8 @@ AGENTS.md
 
 expo-env.d.ts
 # @end expo-cli
+# sql.js: lo copia el postinstall (M-001)
+public/sqljs/
+
+# Credencial de Firebase (FCM); en EAS va como variable de tipo archivo (M-012)
+google-services.json

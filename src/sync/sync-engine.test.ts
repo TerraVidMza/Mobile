@@ -102,4 +102,101 @@ describe('syncEngine (100% Coverage)', () => {
     const [, res2] = await Promise.all([promise1, promise2]);
     expect(res2).toEqual({ success: false, totalSynced: 0, errors: 0 });
   });
+
+  describe('reintento automático (M-003)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      // Siempre queda 1 pendiente: el backend lo rechaza en cada ronda.
+      (laboresRepo.countPendientes as jest.Mock).mockResolvedValue(1);
+      (pesajesRepo.countPendientes as jest.Mock).mockResolvedValue(0);
+      (syncLaboresBatch as jest.Mock).mockResolvedValue({
+        totalSynced: 0,
+        errorsCount: 1,
+        interrumpido: false,
+      });
+      (syncPesajesBatch as jest.Mock).mockResolvedValue({
+        totalSynced: 0,
+        errorsCount: 0,
+        interrumpido: false,
+      });
+    });
+
+    afterEach(() => {
+      syncEngine.cancelarReintento();
+      jest.useRealTimers();
+    });
+
+    /** Avanza hasta el próximo reintento y espera a que termine la ronda. */
+    async function correrReintento() {
+      await jest.advanceTimersByTimeAsync(140_000);
+    }
+
+    it('reintenta a los 30/60/120 s y después deja de insistir', async () => {
+      await syncEngine.runSync();
+      expect(useSyncStore.getState().proximoReintentoAt).not.toBeNull();
+      expect(useSyncStore.getState().lastError).toMatch(/se reintenta automáticamente/i);
+
+      await correrReintento();
+      await correrReintento();
+      await correrReintento();
+      expect(syncLaboresBatch).toHaveBeenCalledTimes(4);
+
+      // Agotados los tres reintentos: no se programa otro y el registro sigue pendiente.
+      expect(useSyncStore.getState().proximoReintentoAt).toBeNull();
+      expect(useSyncStore.getState().lastError).toBe('1 registro(s) siguen pendientes de sincronizar.');
+      await correrReintento();
+      expect(syncLaboresBatch).toHaveBeenCalledTimes(4);
+    });
+
+    it('una ronda manual reinicia la cuenta de reintentos', async () => {
+      await syncEngine.runSync();
+      await correrReintento();
+      await correrReintento();
+      await correrReintento();
+      expect(useSyncStore.getState().proximoReintentoAt).toBeNull();
+
+      await syncEngine.runSync();
+      expect(useSyncStore.getState().proximoReintentoAt).not.toBeNull();
+    });
+
+    it('no programa reintentos sin conexión', async () => {
+      useSyncStore.setState({ isConnected: false });
+      await syncEngine.runSync();
+      expect(useSyncStore.getState().proximoReintentoAt).toBeNull();
+    });
+
+    it('el reintento no corre si se perdió la conexión mientras esperaba', async () => {
+      await syncEngine.runSync();
+      useSyncStore.setState({ isConnected: false });
+      await correrReintento();
+      expect(syncLaboresBatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('no sincroniza pesajes si las labores se cortaron por conexión', async () => {
+      (syncLaboresBatch as jest.Mock).mockResolvedValue({
+        totalSynced: 0,
+        errorsCount: 1,
+        interrumpido: true,
+      });
+      await syncEngine.runSync();
+      expect(syncPesajesBatch).not.toHaveBeenCalled();
+    });
+
+    it('cuando todo sube, limpia el error y no programa reintentos', async () => {
+      (laboresRepo.countPendientes as jest.Mock)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValue(0);
+      (syncLaboresBatch as jest.Mock).mockResolvedValue({
+        totalSynced: 1,
+        errorsCount: 0,
+        interrumpido: false,
+      });
+
+      const res = await syncEngine.runSync();
+
+      expect(res).toEqual({ success: true, totalSynced: 1, errors: 0 });
+      expect(useSyncStore.getState().status).toBe('idle');
+      expect(useSyncStore.getState().proximoReintentoAt).toBeNull();
+    });
+  });
 });

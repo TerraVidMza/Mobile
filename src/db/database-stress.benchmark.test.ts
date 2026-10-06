@@ -52,31 +52,30 @@ describe('SQLite Stress & Performance Benchmark', () => {
   it('debe insertar 500 registros de labor con 1.500 insumos en tiempo récord', async () => {
     const startTime = Date.now();
 
-    const db = await getDatabase();
-    await db.withTransactionAsync(async () => {
-      for (let i = 1; i <= 500; i++) {
-        const cuartelId = i % 2 === 0 ? 'c-1' : 'c-2';
-        const tipoId = i % 2 === 0 ? 't-1' : 't-2';
+    // createLabor abre su propia transacción (labor + insumos): no se anida en
+    // otra, igual que en expo-sqlite nativo.
+    for (let i = 1; i <= 500; i++) {
+      const cuartelId = i % 2 === 0 ? 'c-1' : 'c-2';
+      const tipoId = i % 2 === 0 ? 't-1' : 't-2';
 
-        await laboresRepo.createLabor(
-          {
-            localUuid: `bench-labor-${i}`,
-            cuartelId,
-            tipoLaborId: tipoId,
-            fecha: '2026-08-25',
-            cantidad: 10 + (i % 50),
-            estadoSync: EstadoSync.PENDIENTE,
-            errorMessage: null,
-            createdAtLocal: '2026-08-25T10:00:00-03:00',
-          },
-          [
-            { insumoId: 'i-1', cantidad: 1 },
-            { insumoId: 'i-2', cantidad: 2 },
-            { insumoId: 'i-3', cantidad: 0.5 },
-          ],
-        );
-      }
-    });
+      await laboresRepo.createLabor(
+        {
+          localUuid: `bench-labor-${i}`,
+          cuartelId,
+          tipoLaborId: tipoId,
+          fecha: '2026-08-25',
+          cantidad: 10 + (i % 50),
+          estadoSync: EstadoSync.PENDIENTE,
+          errorMessage: null,
+          createdAtLocal: '2026-08-25T10:00:00-03:00',
+        },
+        [
+          { insumoId: 'i-1', cantidad: 1 },
+          { insumoId: 'i-2', cantidad: 2 },
+          { insumoId: 'i-3', cantidad: 0.5 },
+        ],
+      );
+    }
 
     const elapsed = Date.now() - startTime;
     const count = await laboresRepo.countPendientes();

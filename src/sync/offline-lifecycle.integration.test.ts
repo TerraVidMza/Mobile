@@ -6,7 +6,7 @@
  * 2. Transición y persistencia en estado 'pendiente'.
  * 3. Recuperación de señal (evento NetInfo) y disparo reactivo de sincronización en lotes.
  * 4. Manejo de respuesta mixta del backend (éxitos 201 y conflicto 400).
- * 5. Transición atómica de estados a 'sincronizado' y 'error'.
+ * 5. Lo rechazado queda 'pendiente' con el motivo y se programa un reintento (M-003).
  */
 
 import { laboresRepo } from '../db/repositories/labores.repo';
@@ -98,18 +98,18 @@ describe('Offline-First Lifecycle Integration Test (HU-14)', () => {
 
     // Mock de sincronización: 4 labores exitosas y 1 con conflicto de validación (400)
     (laborService.sincronizarLote as jest.Mock).mockResolvedValueOnce([
-      { localUuid: 'labor-offline-1', serverId: 'srv-l1', status: 'created' },
-      { localUuid: 'labor-offline-2', serverId: 'srv-l2', status: 'created' },
-      { localUuid: 'labor-offline-3', serverId: 'srv-l3', status: 'created' },
-      { localUuid: 'labor-offline-4', serverId: 'srv-l4', status: 'created' },
-      { localUuid: 'labor-offline-5', status: 'error', error: 'Insumo sin stock disponible' },
+      { localUuid: 'labor-offline-1', estado: 'sincronizado', registroId: 'srv-l1' },
+      { localUuid: 'labor-offline-2', estado: 'sincronizado', registroId: 'srv-l2' },
+      { localUuid: 'labor-offline-3', estado: 'sincronizado', registroId: 'srv-l3' },
+      { localUuid: 'labor-offline-4', estado: 'sincronizado', registroId: 'srv-l4' },
+      { localUuid: 'labor-offline-5', estado: 'error', errorMessage: 'Insumo sin stock disponible' },
     ]);
 
     // Mock de sincronización de pesajes: 3 exitosos
     (pesajeService.sincronizarLote as jest.Mock).mockResolvedValueOnce([
-      { localUuid: 'pesaje-offline-1', serverId: 'srv-p1', status: 'created' },
-      { localUuid: 'pesaje-offline-2', serverId: 'srv-p2', status: 'created' },
-      { localUuid: 'pesaje-offline-3', serverId: 'srv-p3', status: 'created' },
+      { localUuid: 'pesaje-offline-1', estado: 'sincronizado', pesajeId: 'srv-p1' },
+      { localUuid: 'pesaje-offline-2', estado: 'sincronizado', pesajeId: 'srv-p2' },
+      { localUuid: 'pesaje-offline-3', estado: 'sincronizado', pesajeId: 'srv-p3' },
     ]);
 
     (catalogosSyncService.syncAll as jest.Mock).mockResolvedValue({ success: true });
@@ -129,19 +129,23 @@ describe('Offline-First Lifecycle Integration Test (HU-14)', () => {
     expect(labor1?.estadoSync).toBe(EstadoSync.SINCRONIZADO);
     expect(labor1?.serverId).toBe('srv-l1');
 
-    // La 5ta labor debe estar en 'error' con el mensaje de conflicto
+    // La 5ta labor sigue pendiente con el motivo del rechazo (M-003)
     const labor5 = await laboresRepo.getLaborByUuid('labor-offline-5');
-    expect(labor5?.estadoSync).toBe(EstadoSync.ERROR);
+    expect(labor5?.estadoSync).toBe(EstadoSync.PENDIENTE);
     expect(labor5?.errorMessage).toBe('Insumo sin stock disponible');
+    expect(labor5?.intentosSync).toBe(1);
 
     // Todos los pesajes deben estar 'sincronizado'
     const pesaje1 = await pesajesRepo.getPesajeByUuid('pesaje-offline-1');
     expect(pesaje1?.estadoSync).toBe(EstadoSync.SINCRONIZADO);
     expect(pesaje1?.serverId).toBe('srv-p1');
 
-    // Conteo final de pendientes debe ser 0 (las exitosas están sincronizadas y la fallida está en error)
+    // Queda 1 pendiente (la rechazada) y un reintento automático programado
     const pendientesFinal = await syncEngine.updatePendingCount();
-    expect(pendientesFinal).toBe(0);
+    expect(pendientesFinal).toBe(1);
     expect(useSyncStore.getState().status).toBe('error');
+    expect(useSyncStore.getState().proximoReintentoAt).not.toBeNull();
+
+    syncEngine.cancelarReintento();
   });
 });

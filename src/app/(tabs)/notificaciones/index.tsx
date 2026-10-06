@@ -2,12 +2,14 @@
  * Pantalla de Notificaciones y Avisos — HU-35.
  *
  * Criterios:
- * - Historial paginado ordenado por fecha descendente.
+ * - Historial paginado ordenado por fecha descendente: carga 20 y trae la
+ *   página siguiente al llegar al final de la lista (M-006).
+ * - Tocar una notificación con `urlAccion` lleva a la pantalla que indica.
  * - Muestra título, descripción, timestamp y estado (leída/no leída).
  * - Marcar individualmente o todas como leídas.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import {
   Text,
@@ -16,42 +18,57 @@ import {
   Chip,
   useTheme,
 } from 'react-native-paper';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { notificacionesService } from '../../../services/notificaciones.service';
 import type { Notificacion } from '../../../types/api.types';
+import { rutaDeAccion } from '../../../utils/notificaciones';
+
+const POR_PAGINA = 20;
 
 export default function NotificacionesScreen() {
   const theme = useTheme();
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [noLeidasCount, setNoLeidasCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  // Ref y no estado: `onEndReached` puede dispararse varias veces seguidas y
+  // tiene que ver la página y el "cargando" actuales, no los de su render.
+  const paginacion = useRef({ pagina: 0, totalPaginas: 1, cargando: false });
 
-  const loadData = useCallback(async (resetPage = false) => {
-    const targetPage = resetPage ? 1 : page;
-    setRefreshing(true);
+  const cargar = useCallback(async (desdeCero: boolean) => {
+    const p = paginacion.current;
+    if (p.cargando || (!desdeCero && p.pagina >= p.totalPaginas)) return;
+    p.cargando = true;
+    if (desdeCero) setRefreshing(true);
+    const pagina = desdeCero ? 1 : p.pagina + 1;
     try {
-      const response = await notificacionesService.getMine(targetPage, 20);
-      if (resetPage) {
-        setNotificaciones(response.data);
-        setPage(1);
-      } else {
-        setNotificaciones((prev) => [...prev, ...response.data]);
-      }
+      const response = await notificacionesService.getMine(pagina, POR_PAGINA);
+      p.pagina = pagina;
+      p.totalPaginas = response.totalPages;
+      setNotificaciones((prev) => (desdeCero ? response.data : [...prev, ...response.data]));
       setNoLeidasCount(response.noLeidas);
+      setError(null);
     } catch {
-      // Manejo offline o error
+      setError('No se pudieron cargar las notificaciones. Deslizá hacia abajo para reintentar.');
     } finally {
+      p.cargando = false;
       setRefreshing(false);
     }
-  }, [page]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadData(true);
-    }, [loadData]),
+      void cargar(true);
+    }, [cargar]),
   );
+
+  async function abrir(item: Notificacion) {
+    if (!item.leida) await handleMarcarLeida(item.id);
+    const ruta = rutaDeAccion(item.urlAccion);
+    if (ruta) router.push(ruta);
+  }
 
   async function handleMarcarLeida(id: string) {
     try {
@@ -94,7 +111,16 @@ export default function NotificacionesScreen() {
         data={notificaciones}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} />
+          <RefreshControl refreshing={refreshing} onRefresh={() => cargar(true)} />
+        }
+        onEndReached={() => void cargar(false)}
+        onEndReachedThreshold={0.5}
+        ListHeaderComponent={
+          error ? (
+            <Text variant="bodyMedium" style={{ color: theme.colors.error, marginBottom: 12 }}>
+              {error}
+            </Text>
+          ) : null
         }
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
@@ -111,6 +137,7 @@ export default function NotificacionesScreen() {
         }
         renderItem={({ item }) => (
           <Card
+            onPress={() => void abrir(item)}
             style={[
               styles.card,
               !item.leida && {

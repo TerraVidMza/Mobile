@@ -10,6 +10,13 @@ export enum RolNombre {
 
 // ─── Estado de sincronización ─────────────────────────────────────────────────
 
+/**
+ * Espejo del enum EstadoSync del backend.
+ *
+ * Localmente un registro solo está `pendiente` o `sincronizado`: un intento
+ * fallido lo deja pendiente con el mensaje del error (M-003). `error` solo
+ * llega en las respuestas del backend.
+ */
 export enum EstadoSync {
   PENDIENTE = 'pendiente',
   SINCRONIZADO = 'sincronizado',
@@ -21,10 +28,19 @@ export enum EstadoSync {
 export interface LoginRequest {
   email: string;
   password: string;
+  /** La app se identifica para que el backend exija el permiso `appMovil`. */
+  cliente?: 'web' | 'movil';
 }
 
+/** Respuesta de `POST /auth/login` y de `POST /auth/refresh` (D-023 del backend). */
 export interface LoginResponse {
   accessToken: string;
+  /** Segundos de vida del access token. */
+  expiresIn: number;
+  /** Valor opaco; se cambia por uno nuevo en cada renovación. */
+  refreshToken: string;
+  /** ISO 8601: después de esta fecha hay que volver a iniciar sesión. */
+  refreshExpiresAt: string;
   user: AuthUser;
 }
 
@@ -34,6 +50,8 @@ export interface AuthUser {
   rol: RolNombre;
   empresaId: string;
   debeCambiarPassword: boolean;
+  /** Capacidades del rol, definidas por el backend (D-024). */
+  permisos: string[];
 }
 
 export interface ForgotPasswordRequest {
@@ -108,6 +126,9 @@ export interface CreateRegistroLaborDto {
   cantidad: number;        // > 0
   insumos: DetalleInsumoDto[];
   createdAtLocal?: string; // ISO 8601 con timezone
+  /** Ubicación al registrar, si hubo GPS (D-027). */
+  latitud?: number;
+  longitud?: number;
 }
 
 /** Espejo de SyncRegistroLaborDto del backend. */
@@ -122,8 +143,10 @@ export interface CreatePesajeDto {
   cuadrillaId: string;
   cuartelId: string;
   fecha: string;
-  pesoKg: number;          // > 0
+  kgTotales: number;       // > 0 (localmente se guarda como peso_kg)
   createdAtLocal?: string;
+  latitud?: number;
+  longitud?: number;
 }
 
 export interface SyncPesajeDto {
@@ -142,9 +165,13 @@ export interface Notificacion {
   createdAt: string;
 }
 
+/** Envelope paginado del backend más el contador de no leídas. */
 export interface NotificacionesResponse {
   data: Notificacion[];
   total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
   noLeidas: number;
 }
 
@@ -155,11 +182,23 @@ export interface RegistrarDeviceTokenDto {
 
 // ─── Resultado de sincronización ──────────────────────────────────────────────
 
+/**
+ * Resultado por registro de `POST /registro-labor/sync` y `/pesajes-vendimia/sync`
+ * (y del POST individual). Espejo de SyncResultItem / SyncPesajeResultItem del
+ * backend.
+ */
 export interface SyncResultItem {
   localUuid: string;
-  serverId?: string;
-  yaExistia: boolean;
-  error?: string;
+  estado: EstadoSync;
+  /** Id en el servidor de una labor. */
+  registroId?: string;
+  /** Id en el servidor de un pesaje. */
+  pesajeId?: string;
+  errorMessage?: string;
+  /** true cuando ya estaba sincronizado (reintento idempotente). */
+  yaExistia?: boolean;
+  /** Se guardó, pero usa un ítem de catálogo dado de baja (HU-14). */
+  inconsistenciaCatalogo?: boolean;
 }
 
 // ─── Registro local en SQLite ─────────────────────────────────────────────────
@@ -171,10 +210,16 @@ export interface RegistroLaborLocal {
   fecha: string;
   cantidad: number;
   estadoSync: EstadoSync;
+  /** Mensaje del último intento fallido; null si nunca falló. */
   errorMessage: string | null;
   createdAtLocal: string;
   createdAt: string;
   serverId: string | null;
+  /** Intentos de sincronización fallidos (M-003). */
+  intentosSync: number;
+  /** Ubicación al registrar (M-009); null si no hubo GPS. */
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export interface DetalleInsumoLocal {
@@ -191,8 +236,14 @@ export interface PesajeVendimiaLocal {
   fecha: string;
   pesoKg: number;
   estadoSync: EstadoSync;
+  /** Mensaje del último intento fallido; null si nunca falló. */
   errorMessage: string | null;
   createdAtLocal: string;
   createdAt: string;
   serverId: string | null;
+  /** Intentos de sincronización fallidos (M-003). */
+  intentosSync: number;
+  /** Ubicación al registrar (M-009); null si no hubo GPS. */
+  latitud?: number | null;
+  longitud?: number | null;
 }

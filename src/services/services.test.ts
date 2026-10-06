@@ -59,8 +59,14 @@ describe('API Services Layer (100% Coverage)', () => {
   describe('laborService', () => {
     it('debe registrar una labor individual (HTTP 201 y HTTP 200 idempotente)', async () => {
       (api.post as jest.Mock)
-        .mockResolvedValueOnce({ status: 201, data: { id: 'srv-1', localUuid: 'l-1' } })
-        .mockResolvedValueOnce({ status: 200, data: { id: 'srv-1', localUuid: 'l-1' } });
+        .mockResolvedValueOnce({
+          status: 201,
+          data: { localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1' },
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1', yaExistia: true },
+        });
 
       const res1 = await laborService.registrarUno({
         localUuid: 'l-1',
@@ -70,7 +76,8 @@ describe('API Services Layer (100% Coverage)', () => {
         cantidad: 10,
         insumos: [],
       });
-      expect(res1.yaExistia).toBe(false);
+      expect(res1).toEqual({ localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1' });
+      expect(api.post).toHaveBeenCalledWith('/registro-labor', expect.objectContaining({ localUuid: 'l-1' }));
 
       const res2 = await laborService.registrarUno({
         localUuid: 'l-1',
@@ -90,7 +97,9 @@ describe('API Services Layer (100% Coverage)', () => {
     });
 
     it('debe sincronizar lote de labores', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: [{ localUuid: 'l-1', status: 'created' }] });
+      (api.post as jest.Mock).mockResolvedValue({
+        data: [{ localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1' }],
+      });
       const res = await laborService.sincronizarLote([
         { localUuid: 'l-1', cuartelId: 'c-1', tipoLaborId: 't-1', fecha: '2026-08-25', cantidad: 5, insumos: [] },
       ]);
@@ -102,10 +111,15 @@ describe('API Services Layer (100% Coverage)', () => {
     it('debe registrar un pesaje individual y sincronizar lotes', async () => {
       (api.post as jest.Mock).mockImplementation((url: string) => {
         if (url === '/pesajes-vendimia') {
-          return Promise.resolve({ status: 201, data: { id: 'p-1', localUuid: 'loc-p1' } });
+          return Promise.resolve({
+            status: 201,
+            data: { localUuid: 'loc-p1', estado: 'sincronizado', pesajeId: 'p-1' },
+          });
         }
         if (url === '/pesajes-vendimia/sync') {
-          return Promise.resolve({ data: [{ localUuid: 'loc-p1', serverId: 'p-1', status: 'created' }] });
+          return Promise.resolve({
+            data: [{ localUuid: 'loc-p1', estado: 'sincronizado', pesajeId: 'p-1' }],
+          });
         }
         return Promise.resolve({ data: {} });
       });
@@ -115,12 +129,12 @@ describe('API Services Layer (100% Coverage)', () => {
         cuadrillaId: 'cuad-1',
         cuartelId: 'c-1',
         fecha: '2026-08-25',
-        pesoKg: 500,
+        kgTotales: 500,
       });
-      expect(res.localUuid).toBe('loc-p1');
+      expect(res).toEqual({ localUuid: 'loc-p1', estado: 'sincronizado', pesajeId: 'p-1' });
 
       const batchRes = await pesajeService.sincronizarLote([
-        { localUuid: 'loc-p1', cuadrillaId: 'cuad-1', cuartelId: 'c-1', fecha: '2026-08-25', pesoKg: 500 },
+        { localUuid: 'loc-p1', cuadrillaId: 'cuad-1', cuartelId: 'c-1', fecha: '2026-08-25', kgTotales: 500 },
       ]);
       expect(batchRes.length).toBe(1);
     });
@@ -128,17 +142,53 @@ describe('API Services Layer (100% Coverage)', () => {
 
   describe('catalogosService', () => {
     it('debe invocar todos los endpoints de catálogos', async () => {
+      // Forma real del backend (ver Backend/src/modules/fincas y /cuarteles):
+      // `hectareas`/`activa` en Finca, `variedad` anidado en Cuartel — no
+      // `superficie`/`activo`/`variedad: string`, que es lo que esta prueba
+      // mockeaba antes y por lo que el bug de mapeo pasó desapercibido.
       (api.get as jest.Mock).mockImplementation((url: string) => {
-        if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1' }] });
-        if (url.startsWith('/cuarteles')) return Promise.resolve({ data: [{ id: 'c-1' }] });
-        if (url === '/tipo-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
+        if (url === '/fincas') {
+          return Promise.resolve({
+            data: [{ id: 'f-1', nombre: 'Finca 1', ubicacion: null, hectareas: '10.00', activa: true }],
+          });
+        }
+        if (url.startsWith('/cuarteles')) {
+          return Promise.resolve({
+            data: [
+              {
+                id: 'c-1',
+                fincaId: 'f-1',
+                nombre: 'Cuartel 1',
+                variedad: { nombre: 'Malbec' },
+                hectareas: '5.00',
+                anioImplantacion: 2020,
+                estado: 'pendiente',
+                activo: true,
+              },
+            ],
+          });
+        }
+        if (url === '/tipos-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
         if (url === '/insumos') return Promise.resolve({ data: [{ id: 'i-1' }] });
         if (url.startsWith('/cuadrillas')) return Promise.resolve({ data: [{ id: 'cu-1' }] });
         return Promise.resolve({ data: [] });
       });
 
-      expect(await fincasService.getAll()).toEqual([{ id: 'f-1' }]);
-      expect(await cuartelesService.getByFinca('f-1')).toEqual([{ id: 'c-1' }]);
+      expect(await fincasService.getAll()).toEqual([
+        { id: 'f-1', nombre: 'Finca 1', ubicacion: null, superficie: 10, activo: true },
+      ]);
+      expect(await cuartelesService.getByFinca('f-1')).toEqual([
+        {
+          id: 'c-1',
+          fincaId: 'f-1',
+          nombre: 'Cuartel 1',
+          variedad: 'Malbec',
+          superficie: 5,
+          anioPlantacion: 2020,
+          estado: 'pendiente',
+          activo: true,
+        },
+      ]);
       expect(await tipoLaborService.getAll()).toEqual([{ id: 't-1' }]);
       expect(await insumosService.getAll()).toEqual([{ id: 'i-1' }]);
       expect(await cuadrillasService.getByFinca('f-1')).toEqual([{ id: 'cu-1' }]);
@@ -150,7 +200,7 @@ describe('API Services Layer (100% Coverage)', () => {
       (api.get as jest.Mock).mockImplementation((url: string) => {
         if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1', nombre: 'Finca' }] });
         if (url.startsWith('/cuarteles')) return Promise.resolve({ data: [{ id: 'c-1', fincaId: 'f-1' }] });
-        if (url === '/tipo-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
+        if (url === '/tipos-labor') return Promise.resolve({ data: [{ id: 't-1' }] });
         if (url === '/insumos') return Promise.resolve({ data: [{ id: 'i-1' }] });
         if (url.startsWith('/cuadrillas')) return Promise.resolve({ data: [{ id: 'cu-1', fincaId: 'f-1' }] });
         return Promise.resolve({ data: [] });
@@ -168,7 +218,7 @@ describe('API Services Layer (100% Coverage)', () => {
         if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1' }, { id: 'f-2' }] });
         if (url.includes('f-1')) return Promise.reject(new Error('Finca 1 not found'));
         if (url.includes('f-2')) return Promise.resolve({ data: [{ id: 'c-2' }] });
-        if (url === '/tipo-labor') return Promise.resolve({ data: [] });
+        if (url === '/tipos-labor') return Promise.resolve({ data: [] });
         if (url === '/insumos') return Promise.resolve({ data: [] });
         return Promise.resolve({ data: [] });
       });

@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   Text,
   TextInput,
@@ -26,12 +26,15 @@ import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { useCatalogosStore } from '../../../stores/catalogos.store';
 import { useSyncStore } from '../../../stores/sync.store';
+import { syncEngine } from '../../../sync/sync-engine';
 import { laboresRepo } from '../../../db/repositories/labores.repo';
 import { InsumoSelector } from '../../../components/forms/InsumoSelector';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, DetalleInsumoDto } from '../../../types/api.types';
+import { avisar } from '../../../utils/dialogos';
+import { capturarCoordenadasGPS } from '../../../utils/location';
 
 export default function NuevaLaborScreen() {
   const theme = useTheme();
@@ -108,6 +111,8 @@ export default function NuevaLaborScreen() {
     try {
       const localUuid = Crypto.randomUUID();
       const createdAtLocal = timestampLocal();
+      // Opcional: sin permiso o sin señal se guarda igual (M-009).
+      const gps = await capturarCoordenadasGPS();
 
       await laboresRepo.createLabor(
         {
@@ -119,21 +124,26 @@ export default function NuevaLaborScreen() {
           estadoSync: EstadoSync.PENDIENTE,
           errorMessage: null,
           createdAtLocal,
+          latitud: gps?.latitud ?? null,
+          longitud: gps?.longitud ?? null,
         },
         insumosSeleccionados,
       );
 
       incrementPending(1);
+      // Con señal sube en el momento; sin señal queda pendiente (M-003).
+      if (useSyncStore.getState().isConnected) void syncEngine.runSync();
       await haptics.success();
 
-      Alert.alert(
-        'Labor Guardada',
-        'El registro se guardó localmente y se sincronizará automáticamente.',
-        [{ text: 'Aceptar', onPress: () => router.back() }],
+      // Con Alert.alert el `router.back()` no corría en la PWA (M-006).
+      await avisar(
+        'Labor guardada',
+        'El registro se guardó en el teléfono y se sincroniza automáticamente.',
       );
+      router.back();
     } catch {
       await haptics.error();
-      Alert.alert('Error', 'No se pudo guardar el registro localmente.');
+      void avisar('Error', 'No se pudo guardar el registro en el teléfono.');
     } finally {
       setSaving(false);
     }

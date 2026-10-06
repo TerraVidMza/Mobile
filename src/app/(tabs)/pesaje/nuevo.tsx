@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   Text,
   TextInput,
@@ -25,11 +25,14 @@ import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { useCatalogosStore } from '../../../stores/catalogos.store';
 import { useSyncStore } from '../../../stores/sync.store';
+import { syncEngine } from '../../../sync/sync-engine';
 import { pesajesRepo } from '../../../db/repositories/pesajes.repo';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, Cuadrilla } from '../../../types/api.types';
+import { avisar } from '../../../utils/dialogos';
+import { capturarCoordenadasGPS } from '../../../utils/location';
 
 export default function NuevoPesajeScreen() {
   const theme = useTheme();
@@ -104,6 +107,8 @@ export default function NuevoPesajeScreen() {
     try {
       const localUuid = Crypto.randomUUID();
       const createdAtLocal = timestampLocal();
+      // Opcional: sin permiso o sin señal se guarda igual (M-009).
+      const gps = await capturarCoordenadasGPS();
 
       await pesajesRepo.createPesaje({
         localUuid,
@@ -114,19 +119,23 @@ export default function NuevoPesajeScreen() {
         estadoSync: EstadoSync.PENDIENTE,
         errorMessage: null,
         createdAtLocal,
+        latitud: gps?.latitud ?? null,
+        longitud: gps?.longitud ?? null,
       });
 
       incrementPending(1);
+      // Con señal sube en el momento; sin señal queda pendiente (M-003).
+      if (useSyncStore.getState().isConnected) void syncEngine.runSync();
       await haptics.success();
 
-      Alert.alert(
-        'Pesaje Guardado',
-        'El pesaje se guardó localmente y se sincronizará automáticamente.',
-        [{ text: 'Aceptar', onPress: () => router.back() }],
+      await avisar(
+        'Pesaje guardado',
+        'El pesaje se guardó en el teléfono y se sincroniza automáticamente.',
       );
+      router.back();
     } catch {
       await haptics.error();
-      Alert.alert('Error', 'No se pudo guardar el pesaje localmente.');
+      void avisar('Error', 'No se pudo guardar el pesaje en el teléfono.');
     } finally {
       setSaving(false);
     }

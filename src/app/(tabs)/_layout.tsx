@@ -11,10 +11,13 @@ import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSyncStore } from '../../stores/sync.store';
 import { SyncStatusBar } from '../../components/sync/SyncStatusBar';
+import { useAuthStore } from '../../stores/auth.store';
+import { puede } from '../../utils/permisos';
 
 export default function TabLayout() {
   const theme = useTheme();
   const pendingCount = useSyncStore((s) => s.pendingCount);
+  const user = useAuthStore((s) => s.user);
 
   return (
     <View style={styles.container}>
@@ -33,10 +36,13 @@ export default function TabLayout() {
             fontSize: 12,
             fontWeight: '600',
           },
+          // Mismo marrón oscuro que el sidebar del Web (`--sidebar` en
+          // index.css): un olivo saturado a todo el ancho quedaba muy
+          // chillón como barra superior.
           headerStyle: {
-            backgroundColor: theme.colors.primary,
+            backgroundColor: theme.dark ? '#17110C' : '#3E2B1F',
           },
-          headerTintColor: theme.colors.onPrimary,
+          headerTintColor: '#F5EFE0',
           headerTitleStyle: {
             fontWeight: '700',
           },
@@ -61,6 +67,8 @@ export default function TabLayout() {
               <MaterialCommunityIcons name="clipboard-text-outline" size={size} color={color} />
             ),
             tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+            // Sin el permiso la pestaña no se muestra (M-005).
+            href: puede(user, 'laboresRegistro') ? undefined : null,
           }}
         />
         <Tabs.Screen
@@ -68,6 +76,7 @@ export default function TabLayout() {
           options={{
             title: 'Pesaje',
             headerTitle: 'Pesaje de vendimia',
+            href: puede(user, 'pesajesRegistro') ? undefined : null,
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="scale" size={size} color={color} />
             ),

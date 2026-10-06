@@ -1,89 +1,94 @@
 /**
- * Pruebas unitarias para el componente ResumenKPIs.
+ * Indicadores del día y avance de campaña (M-010).
  */
 
 import renderer, { act } from 'react-test-renderer';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { ResumenKPIs } from './ResumenKPIs';
-import { useThemeStore } from '../../stores/theme.store';
-import { generarBackupJson } from '../../utils/backup';
+import { avanceService } from '../../services/avance.service';
+import { pesajesRepo } from '../../db/repositories/pesajes.repo';
+import { laboresRepo } from '../../db/repositories/labores.repo';
 
-jest.mock('../../utils/backup');
+jest.mock('../../services/avance.service');
+jest.mock('../../db/repositories/pesajes.repo');
+jest.mock('../../db/repositories/labores.repo');
+jest.mock('expo-router', () => ({
+  useFocusEffect: (cb: () => void) => {
+    const { useEffect } = jest.requireActual('react');
+    useEffect(cb, []);
+  },
+}));
 
-function getText(node: any): string {
+function texto(node: unknown): string {
   if (!node) return '';
-  if (typeof node === 'string') return node;
-  if (typeof node === 'number') return String(node);
-  if (Array.isArray(node)) return node.map(getText).join('');
-  if (node.children) return getText(node.children);
-  return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(texto).join('');
+  return texto((node as { children?: unknown }).children);
 }
 
-describe('ResumenKPIs Component', () => {
+async function render() {
+  let componente!: renderer.ReactTestRenderer;
+  await act(async () => {
+    componente = renderer.create(
+      <PaperProvider>
+        <ResumenKPIs />
+      </PaperProvider>,
+    );
+  });
+  return texto(componente.toJSON());
+}
+
+const campania = { id: 'c', nombre: '2026', fechaDesde: '2026-01-01', fechaHasta: '2026-12-31' };
+
+describe('ResumenKPIs', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useThemeStore.setState({ mode: 'default' });
+    (pesajesRepo.getPesajesByFecha as jest.Mock).mockResolvedValue([{ pesoKg: 1500 }, { pesoKg: 3000 }]);
+    (laboresRepo.getLaboresFiltered as jest.Mock).mockResolvedValue([{}, {}]);
+    (avanceService.kilosPendientes as jest.Mock).mockResolvedValue(0);
   });
 
-  it('debe renderizar los KPIs diarios y el progreso de cosecha', () => {
-    let component: any;
-    act(() => {
-      component = renderer.create(
-        <PaperProvider>
-          <ResumenKPIs kilosHoy={4500} metaKilos={10000} laboresHoy={6} pendientesSync={0} />
-        </PaperProvider>,
-      );
+  it('muestra lo pesado hoy y el avance contra la meta de la campaña', async () => {
+    (avanceService.obtener as jest.Mock).mockResolvedValue({
+      avance: { campania, metaKg: 10000, kgCosechados: 4000, cuarteles: [] },
+      actualizadoAt: '2026-10-05T12:00:00Z',
     });
 
-    const text = getText(component.toJSON());
-    expect(text).toContain('Resumen Diario de Cosecha');
-    expect(text).toMatch(/4[.,]500 kg/);
-    expect(text).toContain('6');
-    expect(text).toContain('45%');
-    expect(text).toContain('Todo sincronizado');
+    const t = await render();
+
+    expect(t).toMatch(/4[.,]500 kg/);
+    expect(t).toContain('Labores hoy');
+    expect(t).toContain('Campaña 2026');
+    expect(t).toContain('40%');
   });
 
-  it('debe mostrar advertencia de pendientes de sincronización cuando corresponda', () => {
-    let component: any;
-    act(() => {
-      component = renderer.create(
-        <PaperProvider>
-          <ResumenKPIs kilosHoy={1200} metaKilos={5000} laboresHoy={2} pendientesSync={3} />
-        </PaperProvider>,
-      );
+  it('suma lo pesado sin sincronizar y lo aclara', async () => {
+    (avanceService.obtener as jest.Mock).mockResolvedValue({
+      avance: { campania, metaKg: 10000, kgCosechados: 4000, cuarteles: [] },
+      actualizadoAt: null,
     });
+    (avanceService.kilosPendientes as jest.Mock).mockResolvedValue(1000);
 
-    const text = getText(component.toJSON());
-    expect(text).toContain('3 pendientes de sincronizar');
+    const t = await render();
+
+    expect(t).toContain('50%');
+    expect(t).toMatch(/sin sincronizar/);
   });
 
-  it('debe disparar la generación de backup local al presionar el botón', async () => {
-    (generarBackupJson as jest.Mock).mockResolvedValue({
-      totalLabores: 4,
-      totalPesajes: 8,
+  it('sin metas cargadas no inventa un porcentaje', async () => {
+    (avanceService.obtener as jest.Mock).mockResolvedValue({
+      avance: { campania, metaKg: null, kgCosechados: 4000, cuarteles: [] },
+      actualizadoAt: '2026-10-05T12:00:00Z',
     });
 
-    const onExportSuccess = jest.fn();
-    let component: any;
-    act(() => {
-      component = renderer.create(
-        <PaperProvider>
-          <ResumenKPIs onExportSuccess={onExportSuccess} />
-        </PaperProvider>,
-      );
-    });
+    const t = await render();
 
-    const buttons = component.root.findAll((n: any) => typeof n.props?.onPress === 'function');
-    const backupBtn = buttons.find((b: any) => b.props?.accessibilityLabel === 'Generar Respaldo Local');
-    expect(backupBtn).toBeDefined();
+    expect(t).toMatch(/todavía no cargó las metas/);
+    expect(t).not.toContain('%');
+  });
 
-    await act(async () => {
-      await backupBtn.props.onPress();
-    });
-
-    expect(generarBackupJson).toHaveBeenCalled();
-    expect(onExportSuccess).toHaveBeenCalledWith(
-      expect.stringContaining('Respaldo generado con 4 labores y 8 pesajes'),
-    );
+  it('sin señal y sin dato previo lo dice', async () => {
+    (avanceService.obtener as jest.Mock).mockResolvedValue({ avance: null, actualizadoAt: null });
+    expect(await render()).toMatch(/se ve con señal/);
   });
 });

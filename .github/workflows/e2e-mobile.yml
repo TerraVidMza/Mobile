@@ -1,16 +1,10 @@
 name: TerraVid Mobile E2E Tests (Maestro)
 
+# Solo manual (M-013): los flujos de .maestro/ todavía no coinciden con la app
+# (testID que no existen, textos distintos) y necesitan un backend con datos.
+# Con el disparo en cada PR y todas las noches fallaba siempre.
 on:
-  workflow_dispatch: # Permite ejecución manual desde la pestaña Actions en GitHub
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'src/**'
-      - '.maestro/**'
-      - 'package.json'
-  schedule:
-    # Ejecución programada nocturna diaria (03:00 UTC)
-    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

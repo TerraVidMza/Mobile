@@ -12,7 +12,6 @@ import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import {
   Text,
   Card,
-  Chip,
   FAB,
   Button,
   Menu,
@@ -24,6 +23,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { laboresRepo } from '../../../db/repositories/labores.repo';
 import { useCatalogosStore } from '../../../stores/catalogos.store';
 import { syncEngine } from '../../../sync/sync-engine';
+import { EstadoSyncChip } from '../../../components/sync/EstadoSyncChip';
 import { catalogosSyncService } from '../../../services/catalogos-sync.service';
 import { hoyLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
@@ -38,6 +38,7 @@ type LaborListItem = {
   cantidad: number;
   estadoSync: EstadoSync;
   errorMessage: string | null;
+  intentosSync: number;
   createdAtLocal: string;
   createdAt: string;
   serverId: string | null;
@@ -122,48 +123,11 @@ export default function LaboresScreen() {
 
   const filteredLabores = labores.filter((l) => {
     if (filtroTab === 'pendientes') {
-      return l.estadoSync === EstadoSync.PENDIENTE || l.estadoSync === EstadoSync.ERROR;
+      return l.estadoSync === EstadoSync.PENDIENTE;
     }
     return true;
   });
 
-  function getStatusChip(estado: EstadoSync, errorMessage: string | null) {
-    switch (estado) {
-      case EstadoSync.SINCRONIZADO:
-        return (
-          <Chip
-            icon="check-circle"
-            textStyle={{ color: '#2E7D32' }}
-            style={{ backgroundColor: '#E8F5E9' }}
-            compact
-          >
-            Sincronizado
-          </Chip>
-        );
-      case EstadoSync.PENDIENTE:
-        return (
-          <Chip
-            icon="clock-outline"
-            textStyle={{ color: '#E65100' }}
-            style={{ backgroundColor: '#FFF3E0' }}
-            compact
-          >
-            Pendiente
-          </Chip>
-        );
-      case EstadoSync.ERROR:
-        return (
-          <Chip
-            icon="alert-circle"
-            textStyle={{ color: theme.colors.error }}
-            style={{ backgroundColor: '#FFEBEE' }}
-            compact
-          >
-            {errorMessage ? 'Conflicto' : 'Error'}
-          </Chip>
-        );
-    }
-  }
 
   const selectedFinca = fincas.find((f) => f.id === selectedFincaId);
   const selectedCuartel = cuartelesDisponibles.find((c) => c.id === selectedCuartelId);
@@ -293,7 +257,7 @@ export default function LaboresScreen() {
                 <Text variant="titleMedium" style={{ fontWeight: '700', flex: 1 }}>
                   {item.tipoLaborNombre}
                 </Text>
-                {getStatusChip(item.estadoSync, item.errorMessage)}
+                <EstadoSyncChip estado={item.estadoSync} errorMessage={item.errorMessage} intentos={item.intentosSync} />
               </View>
 
               <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
