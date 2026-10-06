@@ -1,5 +1,5 @@
 # Configuración global de Maestro E2E para TerraVid Mobile
-appId: com.terravid.mobile
+appId: com.terravidmza.mobile
 ---
 - clearState
 - launchApp:

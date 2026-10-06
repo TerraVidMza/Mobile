@@ -17,7 +17,7 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 
 ## Stack Tecnológico
 
-- **React Native 0.86+ / Expo SDK 57+**
+- **React Native 0.76 / Expo SDK 52**
 - **Expo Router**: Navegación file-based con grupos `(auth)` y `(tabs)`
 - **SQLite (`expo-sqlite`)**: Persistencia local offline-first
 - **Zustand**: Gestión de estado global (auth, sync, catálogos)
@@ -118,7 +118,7 @@ cp .env.example .env
 Editar `.env` indicando la URL del Backend:
 - En emulador Android: `EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:3000/api`
 - En simulador iOS: `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api`
-- En dispositivo físico / staging: `EXPO_PUBLIC_API_BASE_URL=https://staging.terravid.com/api`
+- En dispositivo físico contra producción: `EXPO_PUBLIC_API_BASE_URL=https://terravid-api.duckdns.org/api`
 
 ### Ejecución
 ```bash
@@ -139,7 +139,7 @@ npm run web
 
 ## Pruebas y Cobertura
 
-La aplicación cuenta con una suite integral de 30 test suites y 125 pruebas automatizadas (unitarias, integración, rendimiento, accesibilidad A11y, PWA, georreferenciación GPS, biometría, respaldo local y componentes UI).
+33 suites y 180 tests de Jest, con 87 % de cobertura de líneas. La base local se prueba con SQLite real (sql.js). Las pantallas no entran en la cobertura y los E2E de Maestro todavía no funcionan (M-013).
 
 ```bash
 # Ejecutar todas las pruebas

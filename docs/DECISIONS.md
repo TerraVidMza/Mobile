@@ -19,6 +19,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-010 | Avance de cosecha contra la meta de la campaña | ✅ Implementada |
 | M-011 | PWA instalable que abre sin señal | ✅ Implementada |
 | M-012 | Distribución por APK y PWA, sin tiendas | ✅ Implementada |
+| M-013 | Los E2E de Maestro quedan en ejecución manual | 🟡 Pendiente de completar |
 
 ---
 
@@ -310,3 +311,16 @@ servía para generar nada:
 **Pendiente del lado del equipo:** crear la cuenta de Expo, correr
 `eas init`, subir `google-services.json` a EAS y cargar los secretos del CI.
 El procedimiento está en [`DEPLOYMENT.md`](../DEPLOYMENT.md).
+
+## M-013 — Los E2E de Maestro quedan en ejecución manual
+
+**Contexto.** Los cuatro flujos de `.maestro/` nunca pudieron pasar: usaban otro
+`appId`, buscaban `testID` que no existen, esperaban textos distintos y
+necesitaban un backend con datos. El workflow los corría en cada PR y todas las
+noches, y fallaba siempre.
+
+**Decisión.** El workflow queda solo con `workflow_dispatch`. Se corrigió el
+`appId`. El alcance de E2E acordado para la entrega es Web y Backend
+(Playwright y los e2e del backend); completar Maestro requiere agregar `testID`
+a las pantallas y un backend de prueba en el job. Detalle en
+[`TESTING.md`](../TESTING.md).
