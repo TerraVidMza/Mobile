@@ -11,19 +11,14 @@ import type {
 
 export const pesajeService = {
   /**
-   * Envía un pesaje individual al backend.
+   * Envía un registro individual. Lo usa el motor de sync para aislar un
+   * registro cuando el backend rechaza el lote entero (M-003).
+   * HTTP 201 si es nuevo, 200 si ya existía (idempotencia por local_uuid); en
+   * los dos casos el cuerpo es el mismo resultado que devuelve `/sync`.
    */
-  async registrarUno(dto: CreatePesajeDto): Promise<{
-    id: string;
-    localUuid: string;
-    yaExistia: boolean;
-  }> {
-    const response = await api.post('/pesajes-vendimia', dto);
-    return {
-      id: response.data.id,
-      localUuid: response.data.localUuid,
-      yaExistia: response.status === 200,
-    };
+  async registrarUno(dto: CreatePesajeDto): Promise<SyncResultItem> {
+    const response = await api.post<SyncResultItem>('/pesajes-vendimia', dto);
+    return response.data;
   },
 
   /**

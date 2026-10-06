@@ -5,10 +5,13 @@
  * y almacena los registros creados en campo pendientes de sincronización.
  */
 
-/** Versión actual del esquema. Incrementar al agregar migraciones. */
-export const SCHEMA_VERSION = 1;
+/**
+ * Versión del esquema que crean estas sentencias. Es fija: los cambios
+ * posteriores van como migraciones en `migrations.ts` (M-002).
+ */
+export const SCHEMA_VERSION_BASE = 1;
 
-/** Sentencias DDL para crear todas las tablas del esquema local. */
+/** Sentencias DDL del esquema base (versión 1). */
 export const CREATE_TABLES = [
   // ─── Catálogos (descargados desde el backend al login) ────────────────────
 

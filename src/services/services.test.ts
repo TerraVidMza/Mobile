@@ -59,8 +59,14 @@ describe('API Services Layer (100% Coverage)', () => {
   describe('laborService', () => {
     it('debe registrar una labor individual (HTTP 201 y HTTP 200 idempotente)', async () => {
       (api.post as jest.Mock)
-        .mockResolvedValueOnce({ status: 201, data: { id: 'srv-1', localUuid: 'l-1' } })
-        .mockResolvedValueOnce({ status: 200, data: { id: 'srv-1', localUuid: 'l-1' } });
+        .mockResolvedValueOnce({
+          status: 201,
+          data: { localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1' },
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: { localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1', yaExistia: true },
+        });
 
       const res1 = await laborService.registrarUno({
         localUuid: 'l-1',
@@ -70,7 +76,8 @@ describe('API Services Layer (100% Coverage)', () => {
         cantidad: 10,
         insumos: [],
       });
-      expect(res1.yaExistia).toBe(false);
+      expect(res1).toEqual({ localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1' });
+      expect(api.post).toHaveBeenCalledWith('/registro-labor', expect.objectContaining({ localUuid: 'l-1' }));
 
       const res2 = await laborService.registrarUno({
         localUuid: 'l-1',
@@ -90,7 +97,9 @@ describe('API Services Layer (100% Coverage)', () => {
     });
 
     it('debe sincronizar lote de labores', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: [{ localUuid: 'l-1', status: 'created' }] });
+      (api.post as jest.Mock).mockResolvedValue({
+        data: [{ localUuid: 'l-1', estado: 'sincronizado', registroId: 'srv-1' }],
+      });
       const res = await laborService.sincronizarLote([
         { localUuid: 'l-1', cuartelId: 'c-1', tipoLaborId: 't-1', fecha: '2026-08-25', cantidad: 5, insumos: [] },
       ]);
@@ -102,10 +111,15 @@ describe('API Services Layer (100% Coverage)', () => {
     it('debe registrar un pesaje individual y sincronizar lotes', async () => {
       (api.post as jest.Mock).mockImplementation((url: string) => {
         if (url === '/pesajes-vendimia') {
-          return Promise.resolve({ status: 201, data: { id: 'p-1', localUuid: 'loc-p1' } });
+          return Promise.resolve({
+            status: 201,
+            data: { localUuid: 'loc-p1', estado: 'sincronizado', pesajeId: 'p-1' },
+          });
         }
         if (url === '/pesajes-vendimia/sync') {
-          return Promise.resolve({ data: [{ localUuid: 'loc-p1', serverId: 'p-1', status: 'created' }] });
+          return Promise.resolve({
+            data: [{ localUuid: 'loc-p1', estado: 'sincronizado', pesajeId: 'p-1' }],
+          });
         }
         return Promise.resolve({ data: {} });
       });
@@ -115,12 +129,12 @@ describe('API Services Layer (100% Coverage)', () => {
         cuadrillaId: 'cuad-1',
         cuartelId: 'c-1',
         fecha: '2026-08-25',
-        pesoKg: 500,
+        kgTotales: 500,
       });
-      expect(res.localUuid).toBe('loc-p1');
+      expect(res).toEqual({ localUuid: 'loc-p1', estado: 'sincronizado', pesajeId: 'p-1' });
 
       const batchRes = await pesajeService.sincronizarLote([
-        { localUuid: 'loc-p1', cuadrillaId: 'cuad-1', cuartelId: 'c-1', fecha: '2026-08-25', pesoKg: 500 },
+        { localUuid: 'loc-p1', cuadrillaId: 'cuad-1', cuartelId: 'c-1', fecha: '2026-08-25', kgTotales: 500 },
       ]);
       expect(batchRes.length).toBe(1);
     });

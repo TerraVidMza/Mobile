@@ -1,148 +1,119 @@
 /**
- * Pruebas unitarias para el motor de sincronización de labores (HU-14).
+ * Sincronización de labores (HU-14, M-003) contra SQLite real y el servicio
+ * simulado con la forma exacta de la respuesta del backend.
  */
 
 import { syncLaboresBatch } from './sync-labores';
 import { laboresRepo } from '../db/repositories/labores.repo';
 import { laborService } from '../services/labor.service';
+import { closeDatabase, getDatabase } from '../db/database';
+import { EstadoSync, type CreateRegistroLaborDto } from '../types/api.types';
 
-jest.mock('../db/repositories/labores.repo');
 jest.mock('../services/labor.service');
 
+async function crearLabores(cantidad: number) {
+  for (let i = 1; i <= cantidad; i++) {
+    await laboresRepo.createLabor(
+      {
+        localUuid: `l-${String(i).padStart(2, '0')}`,
+        cuartelId: 'c-1',
+        tipoLaborId: 't-1',
+        fecha: '2026-10-05',
+        cantidad: i,
+        estadoSync: EstadoSync.PENDIENTE,
+        errorMessage: null,
+        createdAtLocal: `2026-10-05T08:${String(i).padStart(2, '0')}:00-03:00`,
+      },
+      [{ insumoId: 'i-1', cantidad: 1 }],
+    );
+  }
+}
+
 describe('syncLaboresBatch', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    await closeDatabase();
+    const db = await getDatabase();
+    await db.runAsync(`DELETE FROM detalle_insumo_labor`);
+    await db.runAsync(`DELETE FROM registro_labor`);
   });
 
-  it('debe retornar totalSynced: 0 si no hay pendientes', async () => {
-    (laboresRepo.countPendientes as jest.Mock).mockResolvedValue(0);
-
-    const result = await syncLaboresBatch();
-
-    expect(result).toEqual({ totalSynced: 0, errorsCount: 0 });
-    expect(laborService.sincronizarLote).not.toHaveBeenCalled();
+  afterAll(async () => {
+    await closeDatabase();
   });
 
-  it('debe enviar lote de 10 y marcar sincronizados según respuesta del backend', async () => {
-    const mockPendientes = [
-      {
-        localUuid: 'uuid-1',
-        cuartelId: 'c-1',
-        tipoLaborId: 'tl-1',
-        fecha: '2026-08-25',
-        cantidad: 10,
-        createdAtLocal: '2026-08-25T10:00:00-03:00',
-        insumos: [],
-      },
-      {
-        localUuid: 'uuid-2',
-        cuartelId: 'c-2',
-        tipoLaborId: 'tl-2',
-        fecha: '2026-08-25',
-        cantidad: 5,
-        createdAtLocal: '2026-08-25T10:05:00-03:00',
-        insumos: [],
-      },
-    ];
-
-    const progressMock = jest.fn();
-    (laboresRepo.countPendientes as jest.Mock).mockResolvedValue(2);
-    (laboresRepo.getPendientes as jest.Mock)
-      .mockResolvedValueOnce(mockPendientes)
-      .mockResolvedValueOnce([]);
-
-    (laborService.sincronizarLote as jest.Mock).mockResolvedValue([
-      { localUuid: 'uuid-1', serverId: 'srv-1', status: 'created' },
-      { localUuid: 'uuid-2', serverId: 'srv-2', status: 'already_synced' },
-    ]);
-
-    const result = await syncLaboresBatch(progressMock);
-
-    expect(result).toEqual({ totalSynced: 2, errorsCount: 0 });
-    expect(laboresRepo.markSincronizado).toHaveBeenCalledWith('uuid-1', 'srv-1');
-    expect(laboresRepo.markSincronizado).toHaveBeenCalledWith('uuid-2', 'srv-2');
-    expect(progressMock).toHaveBeenCalledWith(2, 2);
-  });
-
-  it('debe marcar error en SQLite si el backend reporta error para un registro', async () => {
-    const mockPendientes = [
-      {
-        localUuid: 'uuid-err',
-        cuartelId: 'c-invalid',
-        tipoLaborId: 'tl-1',
-        fecha: '2026-08-25',
-        cantidad: 10,
-        createdAtLocal: '2026-08-25T10:00:00-03:00',
-        insumos: [],
-      },
-    ];
-
-    (laboresRepo.countPendientes as jest.Mock).mockResolvedValue(1);
-    (laboresRepo.getPendientes as jest.Mock)
-      .mockResolvedValueOnce(mockPendientes)
-      .mockResolvedValueOnce([]);
-
-    (laborService.sincronizarLote as jest.Mock).mockResolvedValue([
-      {
-        localUuid: 'uuid-err',
-        status: 'error',
-        error: 'El cuartel no existe o fue dado de baja',
-      },
-    ]);
-
-    const result = await syncLaboresBatch();
-
-    expect(result).toEqual({ totalSynced: 0, errorsCount: 1 });
-    expect(laboresRepo.markError).toHaveBeenCalledWith(
-      'uuid-err',
-      'El cuartel no existe o fue dado de baja',
+  it('envía el DTO del backend, guarda registroId y deja pendiente lo rechazado', async () => {
+    await crearLabores(12);
+    (laborService.sincronizarLote as jest.Mock).mockImplementation(
+      async (registros: CreateRegistroLaborDto[]) =>
+        registros.map((r) =>
+          r.localUuid === 'l-03'
+            ? { localUuid: r.localUuid, estado: 'error', errorMessage: 'No hay costo vigente' }
+            : { localUuid: r.localUuid, estado: 'sincronizado', registroId: `srv-${r.localUuid}` },
+        ),
     );
+
+    const res = await syncLaboresBatch();
+
+    expect(res).toEqual({ totalSynced: 11, errorsCount: 1, interrumpido: false });
+
+    const primerLote = (laborService.sincronizarLote as jest.Mock).mock.calls[0][0];
+    expect(primerLote).toHaveLength(10);
+    expect(primerLote[0]).toEqual({
+      localUuid: 'l-01',
+      cuartelId: 'c-1',
+      tipoLaborId: 't-1',
+      fecha: '2026-10-05',
+      cantidad: 1,
+      createdAtLocal: '2026-10-05T08:01:00-03:00',
+      insumos: [{ insumoId: 'i-1', cantidad: 1 }],
+    });
+
+    const sincronizada = await laboresRepo.getLaborByUuid('l-01');
+    expect(sincronizada).toMatchObject({ estadoSync: EstadoSync.SINCRONIZADO, serverId: 'srv-l-01' });
+
+    const rechazada = await laboresRepo.getLaborByUuid('l-03');
+    expect(rechazada).toMatchObject({
+      estadoSync: EstadoSync.PENDIENTE,
+      errorMessage: 'No hay costo vigente',
+      intentosSync: 1,
+    });
+    expect(await laboresRepo.countPendientes()).toBe(1);
   });
 
-  it('debe manejar excepción de red (Error object) y marcar error en los registros', async () => {
-    const mockPendientes = [
-      {
-        localUuid: 'uuid-net',
-        cuartelId: 'c-1',
-        tipoLaborId: 'tl-1',
-        fecha: '2026-08-25',
-        cantidad: 10,
-        createdAtLocal: '2026-08-25T10:00:00-03:00',
-        insumos: [],
-      },
-    ];
+  it('un corte de red deja el lote pendiente y se reintenta en la ronda siguiente', async () => {
+    await crearLabores(2);
+    (laborService.sincronizarLote as jest.Mock).mockRejectedValueOnce(new Error('Network Error'));
 
-    (laboresRepo.countPendientes as jest.Mock).mockResolvedValue(1);
-    (laboresRepo.getPendientes as jest.Mock).mockResolvedValueOnce(mockPendientes);
-    (laborService.sincronizarLote as jest.Mock).mockRejectedValue(new Error('Network Timeout'));
+    const primera = await syncLaboresBatch();
+    expect(primera).toEqual({ totalSynced: 0, errorsCount: 2, interrumpido: true });
+    expect(await laboresRepo.countPendientes()).toBe(2);
 
-    const result = await syncLaboresBatch();
-    expect(result.errorsCount).toBe(1);
-    expect(laboresRepo.markError).toHaveBeenCalledWith('uuid-net', 'Network Timeout');
-  });
-
-  it('debe manejar excepción de red no estándar (string o null)', async () => {
-    const mockPendientes = [
-      {
-        localUuid: 'uuid-net-unknown',
-        cuartelId: 'c-1',
-        tipoLaborId: 'tl-1',
-        fecha: '2026-08-25',
-        cantidad: 10,
-        createdAtLocal: '2026-08-25T10:00:00-03:00',
-        insumos: [],
-      },
-    ];
-
-    (laboresRepo.countPendientes as jest.Mock).mockResolvedValue(1);
-    (laboresRepo.getPendientes as jest.Mock).mockResolvedValueOnce(mockPendientes);
-    (laborService.sincronizarLote as jest.Mock).mockRejectedValue('Unknown network failure');
-
-    const result = await syncLaboresBatch();
-    expect(result.errorsCount).toBe(1);
-    expect(laboresRepo.markError).toHaveBeenCalledWith(
-      'uuid-net-unknown',
-      'Error al sincronizar con el servidor',
+    (laborService.sincronizarLote as jest.Mock).mockImplementation(
+      async (registros: CreateRegistroLaborDto[]) =>
+        registros.map((r) => ({ localUuid: r.localUuid, estado: 'sincronizado', registroId: 'x' })),
     );
+    const segunda = await syncLaboresBatch();
+
+    expect(segunda.totalSynced).toBe(2);
+    expect(await laboresRepo.countPendientes()).toBe(0);
+  });
+
+  it('editar una labor reinicia los intentos y borra el motivo', async () => {
+    await crearLabores(1);
+    await laboresRepo.registrarIntentoFallido('l-01', 'Cuartel dado de baja');
+
+    await laboresRepo.updateLabor(
+      'l-01',
+      { cuartelId: 'c-2', tipoLaborId: 't-1', fecha: '2026-10-05', cantidad: 2 },
+      [],
+    );
+
+    expect(await laboresRepo.getLaborByUuid('l-01')).toMatchObject({
+      cuartelId: 'c-2',
+      errorMessage: null,
+      intentosSync: 0,
+      estadoSync: EstadoSync.PENDIENTE,
+    });
   });
 });

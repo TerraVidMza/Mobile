@@ -1,161 +1,136 @@
 /**
- * Componente de Respaldo y Métricas KPIs de Campo — TerraVid Mobile.
+ * Indicadores del día y avance de la cosecha — M-010.
+ *
+ * - Hoy: kilos pesados y labores cargadas en este teléfono.
+ * - Campaña: kilos cosechados contra la meta que cargó el Propietario por
+ *   cuartel (D-027). Antes la meta era 10.000 kg fija en el código.
+ *
+ * Sin señal muestra el último avance conocido más lo pesado y todavía no
+ * sincronizado.
  */
 
-import React from 'react';
+import { useCallback, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, ProgressBar, Button, useTheme } from 'react-native-paper';
-import { useThemeStore } from '../../stores/theme.store';
-import { generarBackupJson } from '../../utils/backup';
+import { Card, Text, ProgressBar, useTheme } from 'react-native-paper';
+import { useFocusEffect } from 'expo-router';
+import { avanceService, type AvanceCosecha } from '../../services/avance.service';
+import { laboresRepo } from '../../db/repositories/labores.repo';
+import { pesajesRepo } from '../../db/repositories/pesajes.repo';
+import { hoyLocal } from '../../utils/fecha-local';
 
-interface ResumenKPIsProps {
-  kilosHoy?: number;
-  metaKilos?: number;
-  laboresHoy?: number;
-  pendientesSync?: number;
-  onExportSuccess?: (mensaje: string) => void;
+const kg = (n: number) => `${Math.round(n).toLocaleString('es-AR')} kg`;
+
+interface Datos {
+  kilosHoy: number;
+  laboresHoy: number;
+  avance: AvanceCosecha | null;
+  pendientesKg: number;
+  actualizadoAt: string | null;
 }
 
-export const ResumenKPIs: React.FC<ResumenKPIsProps> = ({
-  kilosHoy = 0,
-  metaKilos = 10000,
-  laboresHoy = 0,
-  pendientesSync = 0,
-  onExportSuccess,
-}) => {
+export function ResumenKPIs() {
   const theme = useTheme();
-  const { mode, setMode } = useThemeStore();
+  const [datos, setDatos] = useState<Datos | null>(null);
 
-  const progreso = metaKilos > 0 ? Math.min(kilosHoy / metaKilos, 1) : 0;
-  const porcentaje = Math.round(progreso * 100);
+  useFocusEffect(
+    useCallback(() => {
+      let vigente = true;
+      void (async () => {
+        const hoy = hoyLocal();
+        const [pesajes, labores, avance, pendientesKg] = await Promise.all([
+          pesajesRepo.getPesajesByFecha(hoy),
+          laboresRepo.getLaboresFiltered({ fecha: hoy }),
+          avanceService.obtener(),
+          avanceService.kilosPendientes(),
+        ]);
+        if (!vigente) return;
+        setDatos({
+          kilosHoy: pesajes.reduce((s, p) => s + p.pesoKg, 0),
+          laboresHoy: labores.length,
+          avance: avance.avance,
+          pendientesKg,
+          actualizadoAt: avance.actualizadoAt,
+        });
+      })();
+      return () => {
+        vigente = false;
+      };
+    }, []),
+  );
 
-  const handleExportBackup = async () => {
-    try {
-      const backup = await generarBackupJson();
-      if (onExportSuccess) {
-        onExportSuccess(`Respaldo generado con ${backup.totalLabores} labores y ${backup.totalPesajes} pesajes.`);
-      }
-    } catch {
-      // Manejo silencioso en test/UI
-    }
-  };
-
-  const toggleModoSolar = () => {
-    setMode(mode === 'solar' ? 'default' : 'solar');
-  };
+  if (!datos) return null;
+  const { avance } = datos;
+  const cosechados = (avance?.kgCosechados ?? 0) + datos.pendientesKg;
+  const meta = avance?.metaKg ?? null;
+  const progreso = meta ? Math.min(cosechados / meta, 1) : 0;
 
   return (
-    <Card style={styles.card} mode="elevated">
+    <Card style={styles.card}>
       <Card.Content>
-        <View style={styles.header}>
-          <Text variant="titleMedium" style={styles.title}>
-            Resumen Diario de Cosecha
+        <Text variant="titleMedium" style={styles.titulo}>
+          Resumen del día
+        </Text>
+
+        <View style={styles.fila}>
+          <View style={styles.kpi}>
+            <Text variant="headlineSmall" style={styles.valor}>
+              {kg(datos.kilosHoy)}
+            </Text>
+            <Text variant="bodySmall" style={styles.etiqueta}>
+              Pesados hoy
+            </Text>
+          </View>
+          <View style={styles.kpi}>
+            <Text variant="headlineSmall" style={styles.valor}>
+              {datos.laboresHoy}
+            </Text>
+            <Text variant="bodySmall" style={styles.etiqueta}>
+              Labores hoy
+            </Text>
+          </View>
+        </View>
+
+        {avance?.campania ? (
+          <View>
+            <View style={styles.encabezado}>
+              <Text variant="bodySmall">Campaña {avance.campania.nombre}</Text>
+              {meta !== null && (
+                <Text variant="bodySmall" style={styles.valor}>
+                  {Math.round(progreso * 100)}%
+                </Text>
+              )}
+            </View>
+            {meta !== null ? (
+              <>
+                <ProgressBar progress={progreso} color={theme.colors.primary} style={styles.barra} />
+                <Text variant="bodySmall" style={styles.etiqueta}>
+                  {kg(cosechados)} de {kg(meta)}
+                  {datos.pendientesKg > 0 ? ` (incluye ${kg(datos.pendientesKg)} sin sincronizar)` : ''}
+                </Text>
+              </>
+            ) : (
+              <Text variant="bodySmall" style={styles.etiqueta}>
+                {kg(cosechados)} cosechados. El Propietario todavía no cargó las metas.
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text variant="bodySmall" style={styles.etiqueta}>
+            {datos.actualizadoAt ? 'No hay una campaña en curso.' : 'El avance de la campaña se ve con señal.'}
           </Text>
-          <Button
-            mode={mode === 'solar' ? 'contained' : 'outlined'}
-            compact
-            onPress={toggleModoSolar}
-            accessibilityLabel="Alternar Modo Solar de Alto Contraste"
-          >
-            {mode === 'solar' ? '☀️ Modo Solar' : '🌤️ Normal'}
-          </Button>
-        </View>
-
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiItem}>
-            <Text variant="headlineSmall" style={styles.kpiValue}>
-              {kilosHoy.toLocaleString()} kg
-            </Text>
-            <Text variant="bodySmall" style={styles.kpiLabel}>
-              Cosechados Hoy
-            </Text>
-          </View>
-          <View style={styles.kpiItem}>
-            <Text variant="headlineSmall" style={styles.kpiValue}>
-              {laboresHoy}
-            </Text>
-            <Text variant="bodySmall" style={styles.kpiLabel}>
-              Labores Realizadas
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.progressContainer}>
-          <View style={styles.progressHeader}>
-            <Text variant="bodySmall">Meta diaria: {metaKilos.toLocaleString()} kg</Text>
-            <Text variant="bodySmall" style={styles.percentageText}>
-              {porcentaje}%
-            </Text>
-          </View>
-          <ProgressBar progress={progreso} color={theme.colors.primary} style={styles.progressBar} />
-        </View>
-
-        <View style={styles.footerRow}>
-          <Text variant="bodySmall" style={styles.syncStatus}>
-            {pendientesSync > 0 ? `⚠️ ${pendientesSync} pendientes de sincronizar` : '✅ Todo sincronizado'}
-          </Text>
-          <Button mode="text" compact onPress={handleExportBackup} accessibilityLabel="Generar Respaldo Local">
-            💾 Guardar Respaldo
-          </Button>
-        </View>
+        )}
       </Card.Content>
     </Card>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  title: {
-    fontWeight: 'bold',
-  },
-  kpiRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-  },
-  kpiItem: {
-    alignItems: 'center',
-  },
-  kpiValue: {
-    fontWeight: 'bold',
-  },
-  kpiLabel: {
-    opacity: 0.7,
-  },
-  progressContainer: {
-    marginBottom: 12,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  percentageText: {
-    fontWeight: 'bold',
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E0E0E0',
-    paddingTop: 8,
-  },
-  syncStatus: {
-    opacity: 0.8,
-  },
+  card: { marginTop: 12, borderRadius: 12 },
+  titulo: { fontWeight: '700', marginBottom: 12 },
+  fila: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
+  kpi: { alignItems: 'center' },
+  valor: { fontWeight: '700' },
+  etiqueta: { opacity: 0.75 },
+  encabezado: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  barra: { height: 8, borderRadius: 4, marginBottom: 6 },
 });

@@ -1,17 +1,27 @@
 /**
  * Store de autenticación — Zustand + Secure Storage.
  *
- * Gestiona el estado de sesión, persiste el JWT en SecureStore / localStorage,
- * y coordina la descarga de catálogos al login exitoso.
+ * Gestiona el estado de sesión, persiste los tokens en SecureStore /
+ * localStorage (access + refresh, M-004) y coordina la descarga de catálogos
+ * al login exitoso.
  */
 
 import { create } from 'zustand';
 import { secureStorage } from '../utils/storage';
 import { authService } from '../services/auth.service';
 import { registerUnauthorizedCallback } from '../services/api';
+import {
+  borrarSesion,
+  guardarSesion,
+  puedeRenovar,
+  registrarAlRenovar,
+  vencimientoDelToken,
+} from '../services/sesion.service';
 import { catalogosSyncService } from '../services/catalogos-sync.service';
 import { useCatalogosStore } from './catalogos.store';
 import type { AuthUser } from '../types/api.types';
+import { MENSAJE_SIN_ACCESO_MOVIL, puede } from '../utils/permisos';
+import { BiometricsService } from '../services/biometrics.service';
 
 interface AuthState {
   /** Usuario autenticado, null si no hay sesión. */
@@ -26,6 +36,11 @@ interface AuthState {
   isLoading: boolean;
   /** Mensaje de error del último intento de login. */
   loginError: string | null;
+  /**
+   * Sesión restaurada que espera el desbloqueo biométrico (M-007). Mientras
+   * es true la app muestra la pantalla de bloqueo y no las pestañas.
+   */
+  bloqueada: boolean;
 
   /** Intenta login con email y password. */
   login: (email: string, password: string) => Promise<void>;
@@ -37,6 +52,10 @@ interface AuthState {
   clearSession: () => void;
   /** Limpia el error de login. */
   clearLoginError: () => void;
+  /** El usuario superó la verificación biométrica. */
+  desbloquear: () => void;
+  /** La contraseña temporal ya se cambió: se actualiza el store y lo guardado. */
+  marcarPasswordCambiada: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -46,16 +65,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   debeCambiarPassword: false,
   isLoading: true,
   loginError: null,
+  bloqueada: false,
 
   login: async (email, password) => {
     set({ loginError: null });
     try {
       const response = await authService.login({ email, password });
 
-      // Persiste el token en almacenamiento seguro
-      await secureStorage.setItem('accessToken', response.accessToken);
-      // Persiste datos del usuario para restaurar en el próximo arranque
-      await secureStorage.setItem('user', JSON.stringify(response.user));
+      // El backend ya lo rechaza con 403; esto cubre a un backend anterior a
+      // D-024, que no conoce `cliente` (M-005).
+      if (!puede(response.user, 'appMovil')) {
+        set({ loginError: MENSAJE_SIN_ACCESO_MOVIL });
+        throw new Error(MENSAJE_SIN_ACCESO_MOVIL);
+      }
+
+      // Tokens y usuario en almacenamiento seguro, para restaurar la sesión
+      // en el próximo arranque aunque no haya señal.
+      await guardarSesion(response);
 
       set({
         user: response.user,
@@ -79,6 +105,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // próximo pull-to-refresh o reconexión, que sí reintentan la sync.
       }
     } catch (error: unknown) {
+      if (error instanceof Error && error.message === MENSAJE_SIN_ACCESO_MOVIL) {
+        throw error;
+      }
       let message = 'Error de conexión. Intentá nuevamente.';
 
       if (error && typeof error === 'object' && 'response' in error) {
@@ -87,6 +116,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (status === 401) {
           message = 'Email o contraseña incorrectos';
+        } else if (status === 403) {
+          message = axiosError.response.data?.message ?? MENSAJE_SIN_ACCESO_MOVIL;
         } else if (status === 429) {
           message = axiosError.response.data?.message
             ?? 'Cuenta bloqueada por demasiados intentos. Intentá en 15 minutos';
@@ -100,22 +131,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      // Intenta notificar al backend (revoca el JWT en el servidor).
+      // Revoca en el servidor el access token y la sesión con su refresh token.
       if (get().token) {
         await authService.logout();
       }
     } catch {
       // Si falla (ej. sin red), la sesión se limpia igual en el cliente.
     } finally {
-      await secureStorage.deleteItem('accessToken');
-      await secureStorage.deleteItem('user');
+      await borrarSesion();
       set({
         user: null,
         token: null,
         isAuthenticated: false,
         debeCambiarPassword: false,
         loginError: null,
+        bloqueada: false,
       });
+      // El desbloqueo es de esta sesión: otra persona que entre en el mismo
+      // teléfono no tiene que heredarlo.
+      await BiometricsService.deshabilitar();
     }
   },
 
@@ -124,21 +158,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const token = await secureStorage.getItem('accessToken');
       const userStr = await secureStorage.getItem('user');
 
-      if (token && userStr) {
-        const user: AuthUser = JSON.parse(userStr);
+      // Se entra aunque el access token haya vencido, mientras el refresh siga
+      // vigente: el capataz puede abrir la app sin señal y cargar registros, y
+      // la primera request al volver la conexión renueva la sesión (M-004).
+      const vence = token ? vencimientoDelToken(token) : null;
+      const accessVigente = !vence || vence > new Date();
+      const sesionUtilizable = accessVigente || (await puedeRenovar());
+
+      const user: AuthUser | null = userStr ? JSON.parse(userStr) : null;
+      // Una sesión guardada antes de D-024 no trae permisos: se pide login para
+      // obtenerlos. Lo mismo si el rol perdió el acceso a la app (M-005).
+      if (token && user && sesionUtilizable && puede(user, 'appMovil')) {
+        // Con el desbloqueo activado, la sesión se restaura bloqueada.
+        const bloqueada = await BiometricsService.estaHabilitada();
         set({
           user,
           token,
           isAuthenticated: true,
           debeCambiarPassword: user.debeCambiarPassword,
           isLoading: false,
+          bloqueada,
         });
         return;
       }
     } catch {
-      await secureStorage.deleteItem('accessToken');
-      await secureStorage.deleteItem('user');
+      // Datos corruptos: se descartan.
     }
+    await borrarSesion();
     set({ isLoading: false });
   },
 
@@ -154,8 +200,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   clearLoginError: () => {
     set({ loginError: null });
   },
+
+  desbloquear: () => set({ bloqueada: false }),
+
+  marcarPasswordCambiada: async () => {
+    const user = get().user;
+    if (!user) return;
+    const actualizado = { ...user, debeCambiarPassword: false };
+    // Persistido: si no, la próxima apertura de la app volvía a pedirla.
+    await secureStorage.setItem('user', JSON.stringify(actualizado));
+    set({ user: actualizado, debeCambiarPassword: false });
+  },
 }));
 
 registerUnauthorizedCallback(() => {
   useAuthStore.getState().clearSession();
+});
+
+// Cada renovación trae el usuario actualizado (rol, contraseña temporal).
+registrarAlRenovar((user) => {
+  useAuthStore.setState({ user, debeCambiarPassword: user.debeCambiarPassword });
 });

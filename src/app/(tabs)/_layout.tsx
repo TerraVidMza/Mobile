@@ -11,10 +11,13 @@ import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSyncStore } from '../../stores/sync.store';
 import { SyncStatusBar } from '../../components/sync/SyncStatusBar';
+import { useAuthStore } from '../../stores/auth.store';
+import { puede } from '../../utils/permisos';
 
 export default function TabLayout() {
   const theme = useTheme();
   const pendingCount = useSyncStore((s) => s.pendingCount);
+  const user = useAuthStore((s) => s.user);
 
   return (
     <View style={styles.container}>
@@ -64,6 +67,8 @@ export default function TabLayout() {
               <MaterialCommunityIcons name="clipboard-text-outline" size={size} color={color} />
             ),
             tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+            // Sin el permiso la pestaña no se muestra (M-005).
+            href: puede(user, 'laboresRegistro') ? undefined : null,
           }}
         />
         <Tabs.Screen
@@ -71,6 +76,7 @@ export default function TabLayout() {
           options={{
             title: 'Pesaje',
             headerTitle: 'Pesaje de vendimia',
+            href: puede(user, 'pesajesRegistro') ? undefined : null,
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="scale" size={size} color={color} />
             ),

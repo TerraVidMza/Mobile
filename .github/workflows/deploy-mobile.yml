@@ -18,10 +18,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -36,9 +36,9 @@ jobs:
       - name: Publish Coverage to Step Summary
         if: always()
         run: |
-          echo "### 📊 Resumen de Cobertura de Pruebas (30 Suites / 125 Tests)" >> $GITHUB_STEP_SUMMARY
+          echo "### Cobertura de pruebas" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          npx jest --coverage --coverageReporters=text-summary | grep -A 10 "Coverage summary" >> $GITHUB_STEP_SUMMARY || true
+          cat coverage/lcov-report/index.html 2>/dev/null | grep -o '[0-9.]*% *</span>' | head -4 | sed 's/<\/span>//' >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Web Production Smoke Test
@@ -55,10 +55,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -112,7 +112,8 @@ jobs:
           ssh ${{ secrets.GCP_VM_USER || 'SergioFarias' }}@${{ secrets.GCP_VM_HOST || '34.9.190.155' }} "
             sudo mkdir -p /opt/terravid/mobile &&
             sudo tar -xzf /tmp/dist.tar.gz -C /opt/terravid/mobile &&
-            sudo chmod -R 777 /opt/terravid/mobile &&
+            sudo find /opt/terravid/mobile -type d -exec chmod 755 {} + &&
+            sudo find /opt/terravid/mobile -type f -exec chmod 644 {} + &&
             cd /opt/backend/deploy &&
             sudo docker restart terravid-caddy
           "
@@ -125,13 +126,15 @@ jobs:
       - name: Publish Deployment Summary
         if: always()
         run: |
-          echo "## 🚀 Despliegue Continuo a Google Cloud Exitoso" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "## Despliegue de Mobile (PWA) correcto" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Despliegue de Mobile (PWA) FALLÓ" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Métrica / Recurso | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "| Recurso | Valor |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Ambiente** | Producción (Google Cloud VM \`terravid\`) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **URL de la App** | [https://terravid-mobile.duckdns.org](https://terravid-mobile.duckdns.org) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **API Backend** | [https://terravid-api.duckdns.org/api](https://terravid-api.duckdns.org/api) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Rama** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Estado del Health Check** | 🟢 HTTP/2 200 OK (TLS Activo) |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://terravid-mobile.duckdns.org |" >> $GITHUB_STEP_SUMMARY
+          echo "| Rama | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Estado | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY

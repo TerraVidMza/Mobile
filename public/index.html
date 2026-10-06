@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+  Plantilla de la versión web (PWA) — M-011. `expo export` le agrega el
+  bundle y el favicon. Suma el manifest (para instalar la app desde el
+  navegador, sin tiendas) y el registro del service worker que la deja abrir
+  sin señal.
+-->
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#3E2B1F" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <title>TerraVid</title>
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <noscript>TerraVid necesita JavaScript.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

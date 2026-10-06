@@ -30,6 +30,8 @@ export const solarTheme: MD3Theme = {
 interface ThemeState {
   mode: ThemeMode;
   setMode: (mode: ThemeMode) => Promise<void>;
+  /** Restaura el modo elegido al abrir la app (M-008). */
+  restaurar: () => Promise<void>;
   getTheme: () => MD3Theme;
 }
 
@@ -37,8 +39,15 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   mode: 'default',
 
   setMode: async (mode: ThemeMode) => {
-    await secureStorage.setItem(THEME_STORAGE_KEY, mode);
     set({ mode });
+    await secureStorage.setItem(THEME_STORAGE_KEY, mode);
+  },
+
+  restaurar: async () => {
+    const guardado = await secureStorage.getItem(THEME_STORAGE_KEY);
+    if (guardado === 'default' || guardado === 'dark' || guardado === 'solar') {
+      set({ mode: guardado });
+    }
   },
 
   getTheme: () => {

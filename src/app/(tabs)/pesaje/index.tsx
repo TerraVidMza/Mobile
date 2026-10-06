@@ -17,6 +17,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { pesajesRepo } from '../../../db/repositories/pesajes.repo';
 import { syncEngine } from '../../../sync/sync-engine';
+import { EstadoSyncChip } from '../../../components/sync/EstadoSyncChip';
 import { catalogosSyncService } from '../../../services/catalogos-sync.service';
 import { hoyLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
@@ -73,50 +74,13 @@ export default function PesajesScreen() {
 
   const filteredPesajes = pesajes.filter((p) => {
     if (filtro === 'pendientes') {
-      return p.estadoSync === EstadoSync.PENDIENTE || p.estadoSync === EstadoSync.ERROR;
+      return p.estadoSync === EstadoSync.PENDIENTE;
     }
     return true;
   });
 
   const totalKg = filteredPesajes.reduce((acc, curr) => acc + curr.pesoKg, 0);
 
-  function getStatusChip(estado: EstadoSync, errorMessage: string | null) {
-    switch (estado) {
-      case EstadoSync.SINCRONIZADO:
-        return (
-          <Chip
-            icon="check-circle"
-            textStyle={{ color: '#27AE60' }}
-            style={{ backgroundColor: '#E8F5E9' }}
-            compact
-          >
-            Sincronizado
-          </Chip>
-        );
-      case EstadoSync.PENDIENTE:
-        return (
-          <Chip
-            icon="clock-outline"
-            textStyle={{ color: '#E65100' }}
-            style={{ backgroundColor: '#FFF3E0' }}
-            compact
-          >
-            Pendiente
-          </Chip>
-        );
-      case EstadoSync.ERROR:
-        return (
-          <Chip
-            icon="alert-circle"
-            textStyle={{ color: theme.colors.error }}
-            style={{ backgroundColor: '#FFEBEE' }}
-            compact
-          >
-            {errorMessage ? 'Conflicto' : 'Error'}
-          </Chip>
-        );
-    }
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
@@ -216,7 +180,7 @@ export default function PesajesScreen() {
                   <Text variant="titleMedium" style={{ fontWeight: '700' }}>
                     {item.cuadrillaNombre}
                   </Text>
-                  {getStatusChip(item.estadoSync, item.errorMessage)}
+                  <EstadoSyncChip estado={item.estadoSync} errorMessage={item.errorMessage} intentos={item.intentosSync} />
                 </View>
 
                 <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>

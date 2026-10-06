@@ -18,6 +18,8 @@ import { useAuthStore } from '../stores/auth.store';
 import { initConnectivityMonitor } from '../sync/connectivity-monitor';
 import { useNotificaciones } from '../hooks/useNotificaciones';
 import { OfflineBanner } from '../components/sync/OfflineBanner';
+import { PantallaBloqueo } from '../components/auth/PantallaBloqueo';
+import { solarTheme, useThemeStore } from '../stores/theme.store';
 
 // Mantiene el splash visible mientras cargamos la sesión (solo en nativo)
 if (Platform.OS !== 'web') {
@@ -105,10 +107,16 @@ function useProtectedRoute(isMounted: boolean) {
     if (!isMounted || isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const enCambioPassword = segments[0] === 'cambiar-password';
 
     const timer = setTimeout(() => {
       if (!isAuthenticated && !inAuthGroup) {
         router.replace('/(auth)/login');
+      } else if (isAuthenticated && debeCambiarPassword && !enCambioPassword) {
+        // Desde cualquier pantalla, no solo al salir del login: una sesión
+        // restaurada con la contraseña temporal entraba directo a las pestañas
+        // (M-006).
+        router.replace('/cambiar-password');
       } else if (isAuthenticated && inAuthGroup) {
         if (debeCambiarPassword) {
           router.replace('/cambiar-password');
@@ -126,8 +134,16 @@ function useProtectedRoute(isMounted: boolean) {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const { restore, isLoading } = useAuthStore();
+  const modo = useThemeStore((s) => s.mode);
+  // El modo solar (alto contraste para leer bajo el sol) gana sobre el del
+  // sistema; si no, se sigue al sistema (M-008).
+  const theme =
+    modo === 'solar'
+      ? solarTheme
+      : modo === 'dark' || colorScheme === 'dark'
+        ? darkTheme
+        : lightTheme;
+  const { restore, isLoading, bloqueada } = useAuthStore();
   const [isMounted, setIsMounted] = useState(false);
 
   useProtectedRoute(isMounted);
@@ -137,7 +153,7 @@ export default function RootLayout() {
     const cleanupNet = initConnectivityMonitor();
 
     async function init() {
-      await restore();
+      await Promise.all([restore(), useThemeStore.getState().restaurar()]);
       setIsMounted(true);
       if (Platform.OS !== 'web') {
         await SplashScreen.hideAsync().catch(() => {});
@@ -158,6 +174,8 @@ export default function RootLayout() {
           <View style={styles.center}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
           </View>
+        ) : bloqueada ? (
+          <PantallaBloqueo />
         ) : (
           <Slot />
         )}

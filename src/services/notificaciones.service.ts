@@ -19,9 +19,11 @@ export const notificacionesService = {
   /**
    * Obtiene la lista paginada de notificaciones del usuario.
    */
-  async getMine(page = 1, limit = 20, soloNoLeidas = false): Promise<NotificacionesResponse> {
+  async getMine(page = 1, pageSize = 20, soloNoLeidas = false): Promise<NotificacionesResponse> {
+    // `pageSize` y no `limit`: el backend rechaza con 400 cualquier parámetro
+    // que no conoce, y con `limit` esta pantalla nunca cargó nada (M-006).
     const response = await api.get<NotificacionesResponse>('/notificaciones', {
-      params: { page, limit, soloNoLeidas: soloNoLeidas ? 'true' : undefined },
+      params: { page, pageSize, soloNoLeidas: soloNoLeidas ? 'true' : undefined },
     });
     return response.data;
   },

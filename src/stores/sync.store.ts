@@ -23,6 +23,8 @@ interface SyncState {
   lastError: string | null;
   /** Timestamp de la última sincronización exitosa. */
   lastSyncAt: string | null;
+  /** Cuándo corre el próximo reintento automático; null si no hay uno programado (M-003). */
+  proximoReintentoAt: string | null;
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 
@@ -31,6 +33,7 @@ interface SyncState {
   setProgress: (current: number, total: number) => void;
   setConnected: (connected: boolean) => void;
   setError: (error: string | null) => void;
+  setProximoReintento: (at: string | null) => void;
   markSyncComplete: () => void;
   incrementPending: (by?: number) => void;
   decrementPending: (by?: number) => void;
@@ -44,13 +47,20 @@ export const useSyncStore = create<SyncState>((set) => ({
   isConnected: true,
   lastError: null,
   lastSyncAt: null,
+  proximoReintentoAt: null,
 
   setStatus: (status) => set({ status }),
   setPendingCount: (count) => set({ pendingCount: count }),
   setProgress: (current, total) => set({ currentIndex: current, totalToSync: total }),
+  // Al volver la conexión solo se sale de 'offline': no se pisa un 'error' o un
+  // 'syncing' que esté vigente.
   setConnected: (connected) =>
-    set({ isConnected: connected, status: connected ? 'idle' : 'offline' }),
+    set((state) => ({
+      isConnected: connected,
+      status: !connected ? 'offline' : state.status === 'offline' ? 'idle' : state.status,
+    })),
   setError: (error) => set({ lastError: error }),
+  setProximoReintento: (at) => set({ proximoReintentoAt: at }),
 
   markSyncComplete: () =>
     set({
