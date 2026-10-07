@@ -1,28 +1,11 @@
+# Flujo E2E 01: inicio de sesión del capataz (HU-01).
 appId: com.terravidmza.mobile
 tags:
   - auth
   - smoke
 ---
-# Flujo E2E 01: Inicio de sesión del Capataz
-- launchApp
-
-# Verificar pantalla de bienvenida / login
-- assertVisible: "TerraVid"
-- assertVisible: "Iniciar Sesión"
-
-# Ingresar credenciales
-- tapOn:
-    id: "input-email"
-- inputText: "capataz@terravid.com"
-
-- tapOn:
-    id: "input-password"
-- inputText: "Capataz2026!"
-
-# Presionar botón de ingreso
-- tapOn: "Ingresar"
-
-# Verificar redirección exitosa al Dashboard de Campo
-- assertVisible: "Inicio"
-- assertVisible: "Labores"
-- assertVisible: "Pesaje"
+- runFlow: subflows/login.yaml
+- assertVisible:
+    id: "tab-labores"
+- assertVisible:
+    id: "tab-pesaje"

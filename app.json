@@ -30,7 +30,7 @@
         "USE_BIOMETRIC",
         "USE_FINGERPRINT"
       ],
-      "versionCode": 1
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -68,12 +68,16 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "ef07a3b7-5dde-44ae-971c-29adc761e7ce"
       }
     },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F5EFE0"
-    }
+    },
+    "owner": "sergixfarias"
   }
 }

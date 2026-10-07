@@ -139,7 +139,7 @@ npm run web
 
 ## Pruebas y Cobertura
 
-33 suites y 180 tests de Jest, con 87 % de cobertura de líneas. La base local se prueba con SQLite real (sql.js). Las pantallas no entran en la cobertura y los E2E de Maestro todavía no funcionan (M-013).
+34 suites y 182 tests de Jest, con 87 % de cobertura de líneas. La base local se prueba con SQLite real (sql.js). Las pantallas no entran en la cobertura. Los E2E de Maestro usan `testID` y variables para los datos; se corren a mano contra una API con datos (M-013, ver TESTING.md).
 
 ```bash
 # Ejecutar todas las pruebas

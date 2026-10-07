@@ -1,6 +1,11 @@
-# Configuración global de Maestro E2E para TerraVid Mobile
-appId: com.terravidmza.mobile
----
-- clearState
-- launchApp:
-    clearState: true
+# Configuración del workspace de Maestro (M-013).
+# Corre los flujos de esta carpeta en orden; los de subflows/ no se corren solos.
+flows:
+  - "*"
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - 01-login
+    - 02-registrar-labor
+    - 03-pesaje-vendimia
+    - 04-offline-sync

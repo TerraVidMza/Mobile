@@ -14,7 +14,7 @@ export function OfflineBanner() {
   if (isConnected) return null;
 
   return (
-    <View style={[styles.banner, { backgroundColor: theme.colors.errorContainer }]}>
+    <View testID="banner-offline" style={[styles.banner, { backgroundColor: theme.colors.errorContainer }]}>
       <MaterialCommunityIcons name="wifi-off" size={20} color={theme.colors.onErrorContainer} />
       <Text variant="bodySmall" style={[styles.text, { color: theme.colors.onErrorContainer }]}>
         Sin conexión a internet. Los registros se guardarán en tu dispositivo y se sincronizarán al recuperar señal.

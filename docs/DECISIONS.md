@@ -19,7 +19,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-010 | Avance de cosecha contra la meta de la campaña | ✅ Implementada |
 | M-011 | PWA instalable que abre sin señal | ✅ Implementada |
 | M-012 | Distribución por APK y PWA, sin tiendas | ✅ Implementada |
-| M-013 | Los E2E de Maestro quedan en ejecución manual | 🟡 Pendiente de completar |
+| M-013 | Los E2E de Maestro quedan en ejecución manual | ✅ Implementada |
 
 ---
 
@@ -310,6 +310,19 @@ servía para generar nada:
 
 **Pendiente del lado del equipo:** crear la cuenta de Expo, correr
 `eas init`, subir `google-services.json` a EAS y cargar los secretos del CI.
+
+**Actualización (proyecto de EAS vinculado).** `eas init` creó
+`@sergixfarias/terravid-mobile`. El `projectId` queda en `app.json`
+(`extra.eas.projectId`) en vez de solo en `EAS_PROJECT_ID`: es un
+identificador público, no una credencial, y versionarlo evita que cada
+persona del equipo tenga que configurar la variable para compilar.
+`EAS_PROJECT_ID` sigue teniendo prioridad. El keystore se generó en los
+servidores de Expo en el primer build; `versionCode` lo incrementa EAS y el
+cambio en `app.json` se versiona después de cada build. Los secretos
+`GCP_VM_SSH_KEY` y `GCP_VM_USER` del CI ya estaban cargados. Se registró la
+app Android `com.terravidmza.mobile` en el proyecto de Firebase
+`terravid-24041` y su `google-services.json` quedó en EAS como variable de
+archivo `GOOGLE_SERVICES_JSON` (secreta, en los tres entornos).
 El procedimiento está en [`DEPLOYMENT.md`](../DEPLOYMENT.md).
 
 ## M-013 — Los E2E de Maestro quedan en ejecución manual
@@ -324,3 +337,25 @@ noches, y fallaba siempre.
 (Playwright y los e2e del backend); completar Maestro requiere agregar `testID`
 a las pantallas y un backend de prueba en el job. Detalle en
 [`TESTING.md`](../TESTING.md).
+
+**Actualización (testID y flujos reescritos).** Se completó la parte que
+dependía de la app:
+
+- Las pantallas declaran `testID` en lo que un flujo toca: login, pestañas
+  (`tabBarButtonTestID`), botones flotantes, selectores, campos, guardar y los
+  avisos de sincronización.
+- Los flujos se reescribieron contra la app real. No traen datos fijos: el
+  usuario y los nombres de finca, cuartel, tipo de labor, cuadrilla e insumo
+  entran por variables (`-e`), porque cada base tiene los suyos.
+- El login y la carga de labor son subflujos (`.maestro/subflows/`) que
+  reutilizan los demás.
+- `src/maestro-testids.test.ts` falla si un flujo usa un `id` que ninguna
+  pantalla declara. Corre con Jest en cada PR, así el desfase que dejó los
+  flujos inservibles no se repite sin aviso.
+- El workflow sigue manual: pide la URL de la API, toma el usuario de secrets
+  y los nombres de variables del repositorio, y compila una APK release (con
+  el bundle adentro, sin depender de Metro).
+
+El job no levanta un backend propio: hace falta una API con datos de prueba.
+Los flujos no se corrieron todavía en un emulador; queda como verificación
+manual antes de la entrega.

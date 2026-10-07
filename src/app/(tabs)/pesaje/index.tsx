@@ -204,6 +204,7 @@ export default function PesajesScreen() {
       {/* FAB para nuevo pesaje */}
       <FAB
         icon="plus"
+        testID="fab-nuevo-pesaje"
         label="Nuevo Pesaje"
         onPress={() => {
           haptics.selection();

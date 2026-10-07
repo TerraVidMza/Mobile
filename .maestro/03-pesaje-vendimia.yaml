@@ -1,35 +1,34 @@
+# Flujo E2E 03: pesaje diario de vendimia (HU-24, HU-27).
 appId: com.terravidmza.mobile
 tags:
   - vendimia
-  - pesajes
 ---
-# Flujo E2E 03: Registro de pesaje diario de vendimia (HU-24, HU-27)
-- launchApp
-
-# Navegar a la pestaña Pesajes
-- tapOn: "Pesaje"
-- assertVisible: "Vendimia"
-
-# Abrir formulario de nuevo pesaje
+- runFlow: subflows/login.yaml
+- tapOn:
+    id: "tab-pesaje"
 - tapOn:
     id: "fab-nuevo-pesaje"
-- assertVisible: "Nuevo Pesaje de Vendimia"
-
-# Seleccionar Cuadrilla y Cuartel
-- tapOn: "Seleccionar Cuadrilla..."
-- tapOn: "Cuadrilla Los Andes"
-
-- tapOn: "Seleccionar Cuartel..."
-- tapOn: "Cuartel Malbec 01"
-
-# Ingresar peso en kilogramos
+- assertVisible: "Nuevo pesaje"
+- tapOn:
+    id: "selector-finca"
+- tapOn: ${FINCA}
+- tapOn:
+    id: "selector-cuadrilla"
+- tapOn: ${CUADRILLA}
+- tapOn:
+    id: "selector-cuartel"
+- tapOn: ${CUARTEL + '.*'}
 - tapOn:
     id: "input-peso-kg"
 - inputText: "1250"
-
-# Guardar pesaje
-- tapOn: "Guardar Pesaje"
-
-# Verificar que impactó en el resumen diario acumulado de la cuadrilla
-- assertVisible: "Cuadrilla Los Andes"
-- assertVisible: "1250 kg"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "boton-guardar-pesaje"
+- tapOn:
+    id: "boton-guardar-pesaje"
+- assertVisible: "Pesaje guardado"
+- tapOn: "Aceptar"
+# La lista formatea con es-AR: "1.250 kg".
+- assertVisible: ${CUADRILLA}
+- assertVisible: "1.250 kg"

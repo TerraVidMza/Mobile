@@ -1,0 +1,25 @@
+# Arranca la app limpia e inicia sesión con ${EMAIL} / ${PASSWORD}.
+appId: com.terravidmza.mobile
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+- extendedWaitUntil:
+    visible:
+      id: "input-email"
+    timeout: 20000
+- tapOn:
+    id: "input-email"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "input-password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "boton-ingresar"
+# El primer ingreso descarga los catálogos; puede tardar.
+- extendedWaitUntil:
+    visible:
+      id: "tab-inicio"
+    timeout: 30000

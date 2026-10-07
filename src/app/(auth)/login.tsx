@@ -75,6 +75,7 @@ export default function LoginScreen() {
             render={({ field: { onChange, onBlur, value } }) => (
               <View style={styles.field}>
                 <TextInput
+                  testID="input-email"
                   label="Email"
                   mode="outlined"
                   keyboardType="email-address"
@@ -102,6 +103,7 @@ export default function LoginScreen() {
             render={({ field: { onChange, onBlur, value } }) => (
               <View style={styles.field}>
                 <TextInput
+                  testID="input-password"
                   label="Contraseña"
                   mode="outlined"
                   secureTextEntry={!showPassword}
@@ -136,6 +138,7 @@ export default function LoginScreen() {
           )}
 
           <Button
+            testID="boton-ingresar"
             mode="contained"
             onPress={handleSubmit(onSubmit)}
             loading={isSubmitting}

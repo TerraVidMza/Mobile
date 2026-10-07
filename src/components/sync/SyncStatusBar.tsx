@@ -25,7 +25,7 @@ export function SyncStatusBar() {
 
   if (!isConnected) {
     return (
-      <View style={[styles.bar, { backgroundColor: '#FFF3E0' }]}>
+      <View testID="sync-offline" style={[styles.bar, { backgroundColor: '#FFF3E0' }]}>
         <MaterialCommunityIcons name="cloud-off-outline" size={18} color="#E65100" />
         <Text variant="labelMedium" style={{ color: '#E65100', marginLeft: 8, fontWeight: '600' }}>
           Modo Offline {pendingCount > 0 ? `(${pendingCount} pendientes)` : ''}
@@ -36,7 +36,7 @@ export function SyncStatusBar() {
 
   if (status === 'syncing') {
     return (
-      <View style={[styles.bar, { backgroundColor: '#E3F2FD' }]}>
+      <View testID="sync-en-curso" style={[styles.bar, { backgroundColor: '#E3F2FD' }]}>
         <ActivityIndicator size={16} color="#1565C0" />
         <Text variant="labelMedium" style={{ color: '#1565C0', marginLeft: 8, fontWeight: '600' }}>
           Sincronizando {currentIndex} de {totalToSync} registros...
@@ -48,6 +48,7 @@ export function SyncStatusBar() {
   if (pendingCount > 0) {
     return (
       <TouchableOpacity
+        testID="sync-pendientes"
         onPress={handleManualSync}
         style={[styles.bar, { backgroundColor: '#FFF8E1' }]}
       >
