@@ -145,6 +145,6 @@ hubiera fallado).
 - [ ] `EXPO_PUBLIC_API_BASE_URL` de `eas.json` y del secreto del CI apuntan a la API de producción.
 - [ ] `CORS_ORIGIN` del backend incluye `https://terravid-mobile.duckdns.org` (la PWA lo necesita; el APK no).
 - [ ] `version` de `app.json` incrementada.
-- [ ] Proyecto de EAS vinculado (`projectId` en `app.json`) y `GOOGLE_SERVICES_JSON` cargado en EAS.
+- [x] Proyecto de EAS vinculado (`projectId` en `app.json`) y `GOOGLE_SERVICES_JSON` cargado en EAS.
 - [ ] Prueba en un teléfono real: registrar en modo avión, volver a tener señal y verificar que suba solo.
 - [ ] Prueba de la PWA: instalarla, cortar la red y verificar que abra.

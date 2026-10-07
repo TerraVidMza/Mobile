@@ -319,7 +319,10 @@ persona del equipo tenga que configurar la variable para compilar.
 `EAS_PROJECT_ID` sigue teniendo prioridad. El keystore se generó en los
 servidores de Expo en el primer build; `versionCode` lo incrementa EAS y el
 cambio en `app.json` se versiona después de cada build. Los secretos
-`GCP_VM_SSH_KEY` y `GCP_VM_USER` del CI ya estaban cargados.
+`GCP_VM_SSH_KEY` y `GCP_VM_USER` del CI ya estaban cargados. Se registró la
+app Android `com.terravidmza.mobile` en el proyecto de Firebase
+`terravid-24041` y su `google-services.json` quedó en EAS como variable de
+archivo `GOOGLE_SERVICES_JSON` (secreta, en los tres entornos).
 El procedimiento está en [`DEPLOYMENT.md`](../DEPLOYMENT.md).
 
 ## M-013 — Los E2E de Maestro quedan en ejecución manual
