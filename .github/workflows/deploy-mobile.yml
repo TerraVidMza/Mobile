@@ -76,52 +76,36 @@ jobs:
           path: dist/
           retention-days: 7
 
-  deploy-gcp:
-    name: Continuous Deployment to Google Cloud VM
+  # La PWA se publica en Firebase Hosting (sitio terravid-mobile del proyecto
+  # terravid-24041, el mismo de la Web). Antes iba por SSH a la VM; la copia de
+  # la VM queda sin actualizar y sirve la última versión (M-014).
+  deploy-firebase:
+    name: Despliegue en Firebase Hosting
     needs: build-web
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download Web Artifact
         uses: actions/download-artifact@v4
         with:
           name: web-dist
           path: dist
 
-      - name: Package Web Distribution
-        run: |
-          tar -czf dist.tar.gz -C dist .
-          ls -lh dist.tar.gz
-
-      - name: Setup SSH Connection to VM
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          ssh-private-key: ${{ secrets.GCP_VM_SSH_KEY }}
-
-      - name: Add VM Host Key to Known Hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.GCP_VM_HOST || '34.9.190.155' }} >> ~/.ssh/known_hosts
-
-      - name: Transfer Bundle to VM
-        run: |
-          scp dist.tar.gz ${{ secrets.GCP_VM_USER || 'SergioFarias' }}@${{ secrets.GCP_VM_HOST || '34.9.190.155' }}:/tmp/dist.tar.gz
-
-      - name: Extract & Reload Caddy Service
-        run: |
-          ssh ${{ secrets.GCP_VM_USER || 'SergioFarias' }}@${{ secrets.GCP_VM_HOST || '34.9.190.155' }} "
-            sudo mkdir -p /opt/terravid/mobile &&
-            sudo tar -xzf /tmp/dist.tar.gz -C /opt/terravid/mobile &&
-            sudo find /opt/terravid/mobile -type d -exec chmod 755 {} + &&
-            sudo find /opt/terravid/mobile -type f -exec chmod 644 {} + &&
-            cd /opt/backend/deploy &&
-            sudo docker restart terravid-caddy
-          "
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TERRAVID_24041 }}
+          channelId: live
+          projectId: terravid-24041
+          target: terravid-mobile
 
       - name: Post-Deployment Health Check
         run: |
-          echo "Verificando disponibilidad de https://terravid-mobile.duckdns.org..."
-          curl --retry 5 --retry-delay 3 --retry-all-errors -I -f https://terravid-mobile.duckdns.org
+          curl --retry 5 --retry-delay 3 --retry-all-errors -I -f https://terravid-mobile.web.app
 
       - name: Publish Deployment Summary
         if: always()
@@ -134,7 +118,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Recurso | Valor |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| URL | https://terravid-mobile.duckdns.org |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://terravid-mobile.web.app |" >> $GITHUB_STEP_SUMMARY
           echo "| Rama | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Estado | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY

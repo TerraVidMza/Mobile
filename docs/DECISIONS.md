@@ -20,6 +20,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-011 | PWA instalable que abre sin señal | ✅ Implementada |
 | M-012 | Distribución por APK y PWA, sin tiendas | ✅ Implementada |
 | M-013 | Los E2E de Maestro quedan en ejecución manual | ✅ Implementada |
+| M-014 | La PWA se publica en Firebase Hosting, junto a la Web | ✅ Implementada |
 
 ---
 
@@ -359,3 +360,31 @@ dependía de la app:
 El job no levanta un backend propio: hace falta una API con datos de prueba.
 Los flujos no se corrieron todavía en un emulador; queda como verificación
 manual antes de la entrega.
+
+---
+
+## M-014 — La PWA se publica en Firebase Hosting, junto a la Web
+
+**Contexto.** La Web estaba en Firebase Hosting y la PWA en la VM (Caddy),
+con dos mecanismos de despliegue distintos. La VM es una e2-micro (1 GB) que
+además corre el backend, Postgres y Mosquitto. Servir archivos estáticos no
+necesita la VM.
+
+**Decisión.** La PWA pasa al sitio `terravid-mobile` del proyecto de Firebase
+`terravid-24041` (`https://terravid-mobile.web.app`).
+
+- `firebase.json` define el sitio, el rewrite a `index.html` (Expo Router) y
+  la caché: un año solo para `/_expo/**` y `/assets/**` (con hash); el resto,
+  `no-cache`. El `.wasm` de SQLite y los íconos no tienen hash.
+- El job `deploy-firebase` reemplaza al `deploy-gcp` (SSH a la VM). Usa la
+  misma cuenta de servicio que la Web
+  (`FIREBASE_SERVICE_ACCOUNT_TERRAVID_24041`).
+- La copia de la VM no se borra: sigue sirviendo la última versión. La base
+  local de la PWA vive en el navegador y depende del dominio; quien la tenga
+  instalada desde `duckdns` debe sincronizar ahí y después instalar la nueva.
+- El backend tiene que aceptar el origen nuevo en `CORS_ORIGIN`.
+
+**Por qué no todo en Firebase.** El backend mantiene una conexión fija con
+Mosquitto (MQTT por TCP, puerto 8883) y usa Postgres. Firebase Hosting y
+Cloud Run no aceptan TCP directo, y Cloud SQL cuesta más que la e2-micro, que
+entra en la capa gratuita. El backend, Postgres y Mosquitto siguen en la VM.
