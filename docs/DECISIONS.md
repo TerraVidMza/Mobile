@@ -310,6 +310,16 @@ servía para generar nada:
 
 **Pendiente del lado del equipo:** crear la cuenta de Expo, correr
 `eas init`, subir `google-services.json` a EAS y cargar los secretos del CI.
+
+**Actualización (proyecto de EAS vinculado).** `eas init` creó
+`@sergixfarias/terravid-mobile`. El `projectId` queda en `app.json`
+(`extra.eas.projectId`) en vez de solo en `EAS_PROJECT_ID`: es un
+identificador público, no una credencial, y versionarlo evita que cada
+persona del equipo tenga que configurar la variable para compilar.
+`EAS_PROJECT_ID` sigue teniendo prioridad. El keystore se generó en los
+servidores de Expo en el primer build; `versionCode` lo incrementa EAS y el
+cambio en `app.json` se versiona después de cada build. Los secretos
+`GCP_VM_SSH_KEY` y `GCP_VM_USER` del CI ya estaban cargados.
 El procedimiento está en [`DEPLOYMENT.md`](../DEPLOYMENT.md).
 
 ## M-013 — Los E2E de Maestro quedan en ejecución manual

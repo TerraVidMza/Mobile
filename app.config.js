@@ -8,9 +8,9 @@
  *   variable de tipo archivo `GOOGLE_SERVICES_JSON`; en local, si existe el
  *   archivo en la raíz se usa. Sin ninguno de los dos el APK se genera igual,
  *   pero sin push.
- * - `projectId` de EAS: lo escribe `eas init` en `EAS_PROJECT_ID` o se toma de
- *   la variable de entorno. No se deja un valor de ejemplo, que hacía fallar el
- *   build con un error poco claro.
+ * - `projectId` de EAS: está en `app.json` (`extra.eas.projectId`, lo escribió
+ *   `eas init`; no es secreto). `EAS_PROJECT_ID` lo reemplaza, por si se
+ *   vincula otra cuenta de Expo sin tocar el archivo.
  */
 const fs = require('fs');
 const path = require('path');

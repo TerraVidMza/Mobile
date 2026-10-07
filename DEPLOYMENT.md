@@ -37,17 +37,19 @@ del CI y volver a generar el APK.
 
 1. Cuenta gratuita en [expo.dev](https://expo.dev) e instalar la CLI:
    `npm install -g eas-cli` y `eas login`.
-2. Vincular el proyecto: `eas init`. Crea el proyecto en Expo y muestra su
-   `projectId`; guardarlo como variable `EAS_PROJECT_ID` (en el entorno local
-   y en *expo.dev → proyecto → Environment variables*). `app.config.js` lo toma
-   de ahí.
+2. Vincular el proyecto: **ya está hecho**. `eas init` creó
+   `@sergixfarias/terravid-mobile` y escribió el `projectId` y el `owner` en
+   `app.json` (no son secretos). Para usar otra cuenta de Expo: cambiar
+   `owner` y correr `eas init` de nuevo, o definir `EAS_PROJECT_ID`, que
+   tiene prioridad.
 3. **Notificaciones push (FCM):** descargar `google-services.json` desde la
    consola de Firebase (proyecto → Configuración → app Android
    `com.terravidmza.mobile`) y subirlo a EAS como variable **de tipo archivo**
    llamada `GOOGLE_SERVICES_JSON`. No se versiona (está en `.gitignore`). Sin
    él el APK funciona igual, pero sin push.
-4. Claves de firma: en el primer build EAS ofrece generarlas y guardarlas.
-   Aceptar. **Hay que firmar siempre con la misma clave**: si cambia, los
+4. Claves de firma: **ya generadas**. El primer build creó el keystore en
+   los servidores de Expo (*expo.dev → proyecto → Credentials*). Bajar una
+   copia de respaldo desde ahí (`eas credentials`). **Hay que firmar siempre con la misma clave**: si cambia, los
    teléfonos no pueden actualizar sin desinstalar (y perder los registros sin
    sincronizar).
 
@@ -143,6 +145,6 @@ hubiera fallado).
 - [ ] `EXPO_PUBLIC_API_BASE_URL` de `eas.json` y del secreto del CI apuntan a la API de producción.
 - [ ] `CORS_ORIGIN` del backend incluye `https://terravid-mobile.duckdns.org` (la PWA lo necesita; el APK no).
 - [ ] `version` de `app.json` incrementada.
-- [ ] `EAS_PROJECT_ID` y `GOOGLE_SERVICES_JSON` cargados en EAS.
+- [ ] Proyecto de EAS vinculado (`projectId` en `app.json`) y `GOOGLE_SERVICES_JSON` cargado en EAS.
 - [ ] Prueba en un teléfono real: registrar en modo avión, volver a tener señal y verificar que suba solo.
 - [ ] Prueba de la PWA: instalarla, cortar la red y verificar que abra.
