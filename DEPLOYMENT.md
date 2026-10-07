@@ -6,7 +6,7 @@ TerraVid Mobile se distribuye de dos formas, **sin tiendas oficiales**
 | Canal | Para quién | Cómo se instala |
 |---|---|---|
 | **APK de Android** | Capataces con teléfono Android | Se descarga el `.apk` y se instala (permitiendo "orígenes desconocidos") |
-| **PWA** | Cualquier teléfono o tablet con navegador | Se abre `https://terravid-mobile.duckdns.org` y se elige "Agregar a la pantalla de inicio" |
+| **PWA** | Cualquier teléfono o tablet con navegador | Se abre `https://terravid-mobile.web.app` y se elige "Agregar a la pantalla de inicio" |
 
 Las dos usan el mismo código, funcionan sin señal y sincronizan solas al
 volver la conexión (M-001, M-003, M-011).
@@ -94,14 +94,24 @@ Genera `dist/` con el manifest, el service worker (`sw.js`), los íconos y el
 
 ### 3.2. Servir
 
-En producción la sirve el Caddy de la VM (bloque `terravid-mobile.duckdns.org`
-en `Backend/deploy/Caddyfile`), desde `/opt/terravid/mobile`, montado en el
-contenedor como `/srv/mobile`.
+En producción la sirve **Firebase Hosting**: sitio `terravid-mobile` del
+proyecto `terravid-24041`, el mismo de la Web (M-014). La configuración está
+en [`firebase.json`](firebase.json) y [`.firebaserc`](.firebaserc). A mano:
 
-**Caché:** `sw.js`, `index.html` y `manifest.json` no se pueden cachear (si
-no, una versión nueva no llega nunca); los bundles con hash, sí. Ya está
-configurado en el Caddyfile y en [`nginx.conf`](nginx.conf) (imagen Docker
-alternativa).
+```bash
+npx firebase-tools deploy --only hosting:terravid-mobile --project terravid-24041
+```
+
+**Caché:** todo sale con `no-cache` salvo `/_expo/**` y `/assets/**`, que
+tienen hash en el nombre y se cachean un año. `sw.js`, `index.html` y
+`manifest.json` no se pueden cachear (si no, una versión nueva no llega
+nunca); el `.wasm` de SQLite y los íconos no tienen hash, así que tampoco.
+[`nginx.conf`](nginx.conf) (imagen Docker alternativa) sigue las mismas reglas
+para los archivos clave.
+
+La copia anterior en la VM (`terravid-mobile.duckdns.org`, servida por Caddy
+desde `/opt/terravid/mobile`) ya no se actualiza: queda con la última versión
+para que quien la tenga instalada pueda sincronizar lo pendiente.
 
 Con Docker:
 
@@ -119,9 +129,8 @@ en cada push a `main`:
 
 1. **validate:** `tsc`, Jest con cobertura y un export web de prueba.
 2. **build-web:** `expo export` con la URL de producción.
-3. **deploy-gcp:** copia `dist/` a la VM por SSH, lo extrae en
-   `/opt/terravid/mobile` (directorios 755, archivos 644), reinicia Caddy y
-   verifica que responda.
+3. **deploy-firebase:** publica `dist/` en el sitio `terravid-mobile` de
+   Firebase Hosting y verifica que responda.
 
 El resumen del job informa el estado real (antes decía "200 OK" aunque
 hubiera fallado).
@@ -130,9 +139,7 @@ hubiera fallado).
 
 | Secreto | Contenido |
 |---|---|
-| `GCP_VM_HOST` | IP o dominio de la VM |
-| `GCP_VM_USER` | Usuario SSH |
-| `GCP_VM_SSH_KEY` | Clave privada SSH de despliegue |
+| `FIREBASE_SERVICE_ACCOUNT_TERRAVID_24041` | JSON de la cuenta de servicio de Firebase (el mismo que usa el repo Web) |
 | `EXPO_PUBLIC_API_BASE_URL` | URL de la API |
 
 > El workflow todavía tiene la IP y el usuario como valores por defecto si
@@ -143,7 +150,7 @@ hubiera fallado).
 ## 5. Checklist antes de distribuir
 
 - [ ] `EXPO_PUBLIC_API_BASE_URL` de `eas.json` y del secreto del CI apuntan a la API de producción.
-- [ ] `CORS_ORIGIN` del backend incluye `https://terravid-mobile.duckdns.org` (la PWA lo necesita; el APK no).
+- [ ] `CORS_ORIGIN` del backend incluye `https://terravid-mobile.web.app` (la PWA lo necesita; el APK no).
 - [ ] `version` de `app.json` incrementada.
 - [x] Proyecto de EAS vinculado (`projectId` en `app.json`) y `GOOGLE_SERVICES_JSON` cargado en EAS.
 - [ ] Prueba en un teléfono real: registrar en modo avión, volver a tener señal y verificar que suba solo.

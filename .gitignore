@@ -62,3 +62,6 @@ public/sqljs/
 
 # Credencial de Firebase (FCM); en EAS va como variable de tipo archivo (M-012)
 google-services.json
+
+# Caché local de la CLI de Firebase
+.firebase/
