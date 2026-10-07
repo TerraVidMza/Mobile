@@ -42,11 +42,14 @@ del CI y volver a generar el APK.
    `app.json` (no son secretos). Para usar otra cuenta de Expo: cambiar
    `owner` y correr `eas init` de nuevo, o definir `EAS_PROJECT_ID`, que
    tiene prioridad.
-3. **Notificaciones push (FCM):** descargar `google-services.json` desde la
-   consola de Firebase (proyecto → Configuración → app Android
-   `com.terravidmza.mobile`) y subirlo a EAS como variable **de tipo archivo**
-   llamada `GOOGLE_SERVICES_JSON`. No se versiona (está en `.gitignore`). Sin
-   él el APK funciona igual, pero sin push.
+3. **Notificaciones push (FCM): ya está hecho.** La app Android
+   `com.terravidmza.mobile` está registrada en el proyecto de Firebase
+   `terravid-24041` y su `google-services.json` está en EAS como variable
+   secreta **de tipo archivo** `GOOGLE_SERVICES_JSON`. No se versiona (está en
+   `.gitignore`). Si hay que regenerarlo: consola de Firebase → Configuración →
+   app Android → descargar, y `eas env:create --name GOOGLE_SERVICES_JSON
+   --type file --visibility secret`. Sin él el APK funciona igual, pero sin
+   push.
 4. Claves de firma: **ya generadas**. El primer build creó el keystore en
    los servidores de Expo (*expo.dev → proyecto → Credentials*). Bajar una
    copia de respaldo desde ahí (`eas credentials`). **Hay que firmar siempre con la misma clave**: si cambia, los
