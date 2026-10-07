@@ -19,7 +19,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-010 | Avance de cosecha contra la meta de la campaña | ✅ Implementada |
 | M-011 | PWA instalable que abre sin señal | ✅ Implementada |
 | M-012 | Distribución por APK y PWA, sin tiendas | ✅ Implementada |
-| M-013 | Los E2E de Maestro quedan en ejecución manual | 🟡 Pendiente de completar |
+| M-013 | Los E2E de Maestro quedan en ejecución manual | ✅ Implementada |
 
 ---
 
@@ -337,3 +337,25 @@ noches, y fallaba siempre.
 (Playwright y los e2e del backend); completar Maestro requiere agregar `testID`
 a las pantallas y un backend de prueba en el job. Detalle en
 [`TESTING.md`](../TESTING.md).
+
+**Actualización (testID y flujos reescritos).** Se completó la parte que
+dependía de la app:
+
+- Las pantallas declaran `testID` en lo que un flujo toca: login, pestañas
+  (`tabBarButtonTestID`), botones flotantes, selectores, campos, guardar y los
+  avisos de sincronización.
+- Los flujos se reescribieron contra la app real. No traen datos fijos: el
+  usuario y los nombres de finca, cuartel, tipo de labor, cuadrilla e insumo
+  entran por variables (`-e`), porque cada base tiene los suyos.
+- El login y la carga de labor son subflujos (`.maestro/subflows/`) que
+  reutilizan los demás.
+- `src/maestro-testids.test.ts` falla si un flujo usa un `id` que ninguna
+  pantalla declara. Corre con Jest en cada PR, así el desfase que dejó los
+  flujos inservibles no se repite sin aviso.
+- El workflow sigue manual: pide la URL de la API, toma el usuario de secrets
+  y los nombres de variables del repositorio, y compila una APK release (con
+  el bundle adentro, sin depender de Metro).
+
+El job no levanta un backend propio: hace falta una API con datos de prueba.
+Los flujos no se corrieron todavía en un emulador; queda como verificación
+manual antes de la entrega.

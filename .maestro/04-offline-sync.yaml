@@ -1,44 +1,35 @@
+# Flujo E2E 04: carga sin señal y sincronización al volver (HU-14, M-003).
+# setAirplaneMode solo funciona en Android.
 appId: com.terravidmza.mobile
 tags:
   - offline
   - sync
 ---
-# Flujo E2E 04: Simulación de pérdida de red y sincronización automática (HU-14)
-- launchApp
-
-# Simular activación de modo avión (sin red)
-- setAirplaneMode: true
-
-# Verificar que aparece el banner de Modo Offline
-- assertVisible: "Sin conexión a internet"
-- assertVisible: "Modo Offline"
-
-# Cargar una labor offline
-- tapOn: "Labores"
-- tapOn:
-    id: "fab-nueva-labor"
-- tapOn: "Seleccionar Finca..."
-- tapOn: "Finca Tupungato"
-- tapOn: "Seleccionar Cuartel..."
-- tapOn: "Cuartel Malbec 01"
-- tapOn: "Seleccionar Tipo de Labor..."
-- tapOn: "Poda de Invierno"
-- tapOn:
-    id: "input-cantidad"
-- inputText: "50"
-- tapOn: "Guardar Labor"
-
-# Verificar badge con 1 registro pendiente
-- assertVisible: "1 pendiente — Tocar para sincronizar"
-
-# Simular recuperación de conectividad (desactivar modo avión)
-- setAirplaneMode: false
-
-# Esperar ≤ 5s para sincronización reactiva en segundo plano
+- runFlow: subflows/login.yaml
+- setAirplaneMode: enabled
 - extendedWaitUntil:
-    visible: "Sincronizando 1 de 1 registros..."
-    timeout: 6000
-
-# Verificar estado final completamente sincronizado
-- assertNotVisible: "1 pendiente — Tocar para sincronizar"
-- assertNotVisible: "Modo Offline"
+    visible:
+      id: "banner-offline"
+    timeout: 10000
+- assertVisible:
+    id: "sync-offline"
+- tapOn:
+    id: "tab-labores"
+- runFlow:
+    file: subflows/cargar-labor.yaml
+    env:
+      CANTIDAD: "50"
+      INSUMO: ""
+- assertVisible: "Modo Offline.*1 pendientes.*"
+- setAirplaneMode: disabled
+# Al volver la señal sube sola; no hace falta tocar nada.
+- extendedWaitUntil:
+    notVisible:
+      id: "banner-offline"
+    timeout: 20000
+- extendedWaitUntil:
+    notVisible:
+      id: "sync-pendientes"
+    timeout: 30000
+- assertNotVisible:
+    id: "sync-offline"
