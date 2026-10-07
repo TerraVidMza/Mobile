@@ -287,6 +287,7 @@ export default function LaboresScreen() {
       {/* FAB para nueva labor */}
       <FAB
         icon="plus"
+        testID="fab-nueva-labor"
         label="Nueva Labor"
         onPress={() => {
           haptics.selection();

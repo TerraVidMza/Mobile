@@ -178,6 +178,7 @@ export default function NuevaLaborScreen() {
           anchor={
             <Button
               mode="outlined"
+              testID="selector-finca"
               onPress={() => {
                 haptics.selection();
                 setFincaMenuVisible(true);
@@ -212,6 +213,7 @@ export default function NuevaLaborScreen() {
           anchor={
             <Button
               mode="outlined"
+              testID="selector-cuartel"
               onPress={() => {
                 haptics.selection();
                 setCuartelMenuVisible(true);
@@ -249,6 +251,7 @@ export default function NuevaLaborScreen() {
           anchor={
             <Button
               mode="outlined"
+              testID="selector-tipo-labor"
               onPress={() => {
                 haptics.selection();
                 setTipoLaborMenuVisible(true);
@@ -280,6 +283,7 @@ export default function NuevaLaborScreen() {
       {/* Fecha (Día local ISO YYYY-MM-DD) */}
       <View style={styles.field}>
         <TextInput
+          testID="input-fecha"
           label="Fecha (YYYY-MM-DD) *"
           mode="outlined"
           value={fecha}
@@ -293,6 +297,7 @@ export default function NuevaLaborScreen() {
       {/* Cantidad */}
       <View style={styles.field}>
         <TextInput
+          testID="input-cantidad"
           label={`Cantidad realizada (${selectedTipoLabor?.unidadMedida ?? 'unidades'}) *`}
           mode="outlined"
           keyboardType="decimal-pad"
@@ -323,6 +328,7 @@ export default function NuevaLaborScreen() {
       {/* Botón Guardar Local */}
       <Button
         mode="contained"
+        testID="boton-guardar-labor"
         icon="content-save-outline"
         onPress={handleGuardar}
         loading={saving}

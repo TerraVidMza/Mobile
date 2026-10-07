@@ -52,6 +52,7 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Inicio',
+            tabBarButtonTestID: 'tab-inicio',
             headerTitle: 'TerraVid',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="home-outline" size={size} color={color} />
@@ -62,6 +63,7 @@ export default function TabLayout() {
           name="labores"
           options={{
             title: 'Labores',
+            tabBarButtonTestID: 'tab-labores',
             headerTitle: 'Labores',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="clipboard-text-outline" size={size} color={color} />
@@ -75,6 +77,7 @@ export default function TabLayout() {
           name="pesaje"
           options={{
             title: 'Pesaje',
+            tabBarButtonTestID: 'tab-pesaje',
             headerTitle: 'Pesaje de vendimia',
             href: puede(user, 'pesajesRegistro') ? undefined : null,
             tabBarIcon: ({ color, size }) => (
@@ -86,6 +89,7 @@ export default function TabLayout() {
           name="notificaciones"
           options={{
             title: 'Avisos',
+            tabBarButtonTestID: 'tab-avisos',
             headerTitle: 'Notificaciones',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="bell-outline" size={size} color={color} />

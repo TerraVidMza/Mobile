@@ -1,10 +1,15 @@
 name: TerraVid Mobile E2E Tests (Maestro)
 
-# Solo manual (M-013): los flujos de .maestro/ todavía no coinciden con la app
-# (testID que no existen, textos distintos) y necesitan un backend con datos.
-# Con el disparo en cada PR y todas las noches fallaba siempre.
+# Solo manual (M-013): los flujos necesitan un backend con datos de prueba que
+# este job no levanta. Se corre contra la API que se indique, con un capataz y
+# catálogos cargados (ver TESTING.md). El contrato flujo <-> testID lo vigila
+# src/maestro-testids.test.ts en cada PR.
 on:
   workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'API contra la que corre la app (ej. https://terravid-api.duckdns.org/api)'
+        required: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,6 +46,15 @@ jobs:
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
       - name: Run E2E Tests on Android Emulator
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ inputs.api_base_url }}
+          MAESTRO_EMAIL: ${{ secrets.MAESTRO_EMAIL }}
+          MAESTRO_PASSWORD: ${{ secrets.MAESTRO_PASSWORD }}
+          MAESTRO_FINCA: ${{ vars.MAESTRO_FINCA }}
+          MAESTRO_CUARTEL: ${{ vars.MAESTRO_CUARTEL }}
+          MAESTRO_TIPO_LABOR: ${{ vars.MAESTRO_TIPO_LABOR }}
+          MAESTRO_CUADRILLA: ${{ vars.MAESTRO_CUADRILLA }}
+          MAESTRO_INSUMO: ${{ vars.MAESTRO_INSUMO }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -53,17 +67,14 @@ jobs:
             # 1. Generar proyecto nativo Android desde Expo
             npx expo prebuild --platform android --clean
             
-            # 2. Compilar APK de Debug
-            cd android && ./gradlew assembleDebug --no-daemon && cd ..
+            # 2. Compilar APK release: lleva el bundle JS adentro y no depende de Metro
+            cd android && ./gradlew assembleRelease --no-daemon && cd ..
             
             # 3. Instalar la APK en el emulador Android activo
-            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
             
-            # 4. Iniciar Metro Bundler en segundo plano para Expo
-            npx expo start --no-dev --minify &
-            
-            # 5. Ejecutar la suite completa de flujos Maestro
-            maestro test .maestro/ --format junit --output e2e-report.xml
+            # 4. Ejecutar la suite completa de flujos Maestro
+            maestro test .maestro/ --format junit --output e2e-report.xml               -e EMAIL="$MAESTRO_EMAIL" -e PASSWORD="$MAESTRO_PASSWORD"               -e FINCA="$MAESTRO_FINCA" -e CUARTEL="$MAESTRO_CUARTEL"               -e TIPO_LABOR="$MAESTRO_TIPO_LABOR" -e CUADRILLA="$MAESTRO_CUADRILLA"               -e INSUMO="$MAESTRO_INSUMO"
 
       - name: Upload E2E Test Report & Artifacts
         if: always()

@@ -1,0 +1,42 @@
+# Completa y guarda el formulario de labor. Parte de la pestaña Labores.
+# Variables: FINCA, CUARTEL, TIPO_LABOR, CANTIDAD y, opcional, INSUMO.
+appId: com.terravidmza.mobile
+---
+- tapOn:
+    id: "fab-nueva-labor"
+- assertVisible: "Nueva labor"
+- tapOn:
+    id: "selector-finca"
+- tapOn: ${FINCA}
+- tapOn:
+    id: "selector-cuartel"
+# El menú muestra "Nombre (variedad)".
+- tapOn: ${CUARTEL + '.*'}
+- tapOn:
+    id: "selector-tipo-labor"
+# El menú muestra "Nombre (unidad)".
+- tapOn: ${TIPO_LABOR + '.*'}
+- tapOn:
+    id: "input-cantidad"
+- inputText: ${CANTIDAD}
+- hideKeyboard
+- runFlow:
+    when:
+      true: ${typeof INSUMO !== 'undefined' && INSUMO !== ''}
+    commands:
+      - tapOn:
+          id: "selector-insumo"
+      - tapOn: ${INSUMO + '.*'}
+      - tapOn:
+          id: "input-insumo-cantidad"
+      - inputText: "5"
+      - hideKeyboard
+      - tapOn:
+          id: "boton-agregar-insumo"
+- scrollUntilVisible:
+    element:
+      id: "boton-guardar-labor"
+- tapOn:
+    id: "boton-guardar-labor"
+- assertVisible: "Labor guardada"
+- tapOn: "Aceptar"

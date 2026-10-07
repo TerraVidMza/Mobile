@@ -111,6 +111,7 @@ export function InsumoSelector({
           anchor={
             <Button
               mode="outlined"
+              testID="selector-insumo"
               onPress={() => setMenuVisible(true)}
               style={styles.selectButton}
               contentStyle={{ justifyContent: 'flex-start' }}
@@ -138,6 +139,7 @@ export function InsumoSelector({
         </Menu>
 
         <TextInput
+          testID="input-insumo-cantidad"
           label="Cant."
           mode="outlined"
           keyboardType="decimal-pad"
@@ -149,6 +151,7 @@ export function InsumoSelector({
 
         <Button
           mode="contained-tonal"
+          testID="boton-agregar-insumo"
           onPress={handleAdd}
           disabled={!selectedInsumo || !cantidad}
           style={styles.addButton}
