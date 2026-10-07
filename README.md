@@ -11,7 +11,7 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 | [`Backend`](https://github.com/TerraVidMza/Backend) | API REST — NestJS + TypeORM + PostgreSQL/PostGIS |
 | [`Web`](https://github.com/TerraVidMza/Web) | Frontend web de oficina (Propietario / Agrónomo) |
 | [`Mobile`](https://github.com/TerraVidMza/Mobile) (este repo) | App móvil offline-first para campo (Capataz) |
-| [`IoTSensor`](https://github.com/TerraVidMza/IoTSensor) | Firmware de los nodos de telemetría (ESP32) |
+| [`IoTSensor`](https://github.com/TerraVidMza/IoTSensor) | Firmware de los nodos de telemetría (ESP32 y ESP8266) |
 
 ---
 
@@ -158,7 +158,12 @@ Para más detalles sobre la arquitectura de testing, consultar [`TESTING.md`](TE
 
 ## Despliegue y CI/CD
 
-El pipeline de CI/CD en GitHub Actions valida tipos, ejecuta todas las pruebas y genera artefactos de producción web. Para consultar el plan detallado para Android, iOS y Web, ver [`DEPLOYMENT.md`](DEPLOYMENT.md).
+| Canal | Dónde | Cómo se publica |
+|---|---|---|
+| APK de Android | EAS Build, proyecto `@sergixfarias/terravid-mobile` | `eas build --platform android --profile production` (M-012) |
+| PWA | Firebase Hosting, `https://terravid-mobile.web.app` | Automático en cada push a `main` (M-014) |
+
+El workflow de GitHub Actions valida tipos, corre las pruebas, exporta la PWA y la publica. El detalle (credenciales, keystore, notificaciones push, caché de la PWA) está en [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ---
 
