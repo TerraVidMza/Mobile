@@ -6,7 +6,7 @@ TerraVid Mobile se distribuye de dos formas, **sin tiendas oficiales**
 | Canal | Para quién | Cómo se instala |
 |---|---|---|
 | **APK de Android** | Capataces con teléfono Android | Se descarga el `.apk` y se instala (permitiendo "orígenes desconocidos") |
-| **PWA** | Cualquier teléfono o tablet con navegador | Se abre `https://terravid-mobile.web.app` y se elige "Agregar a la pantalla de inicio" |
+| **PWA** | Cualquier teléfono o tablet con navegador | Se abre `https://terravid-app.web.app` y se elige "Agregar a la pantalla de inicio" |
 
 Las dos usan el mismo código, funcionan sin señal y sincronizan solas al
 volver la conexión (M-001, M-003, M-011).
@@ -44,10 +44,11 @@ del CI y volver a generar el APK.
    tiene prioridad.
 3. **Notificaciones push (FCM): ya está hecho.** La app Android
    `com.terravidmza.mobile` está registrada en el proyecto de Firebase
-   `terravid-24041` y su `google-services.json` está en EAS como variable
+   `terravid` (M-015) y su `google-services.json` está en EAS como variable
    secreta **de tipo archivo** `GOOGLE_SERVICES_JSON`. No se versiona (está en
    `.gitignore`). Si hay que regenerarlo: consola de Firebase → Configuración →
-   app Android → descargar, y `eas env:create --name GOOGLE_SERVICES_JSON
+   app Android → descargar (o `npx firebase-tools apps:sdkconfig ANDROID
+   1:286067019564:android:e454f766e28d830e856689 --project terravid`), y `eas env:create --name GOOGLE_SERVICES_JSON
    --type file --visibility secret`. Sin él el APK funciona igual, pero sin
    push.
 4. Claves de firma: **ya generadas**. El primer build creó el keystore en
@@ -97,12 +98,12 @@ Genera `dist/` con el manifest, el service worker (`sw.js`), los íconos y el
 
 ### 3.2. Servir
 
-En producción la sirve **Firebase Hosting**: sitio `terravid-mobile` del
-proyecto `terravid-24041`, el mismo de la Web (M-014). La configuración está
+En producción la sirve **Firebase Hosting**: sitio `terravid-app` del
+proyecto `terravid`, el mismo de la Web y de la VM (M-014, M-015). La configuración está
 en [`firebase.json`](firebase.json) y [`.firebaserc`](.firebaserc). A mano:
 
 ```bash
-npx firebase-tools deploy --only hosting:terravid-mobile --project terravid-24041
+npx firebase-tools deploy --only hosting --project terravid
 ```
 
 **Caché:** todo sale con `no-cache` salvo `/_expo/**` y `/assets/**`, que
@@ -113,7 +114,9 @@ nunca); el `.wasm` de SQLite y los íconos no tienen hash, así que tampoco.
 para los archivos clave.
 
 La PWA vieja de la VM (`terravid-mobile.duckdns.org`) se dio de baja y el
-dominio ya no existe (D-032 del repo Backend).
+dominio ya no existe (D-032 del repo Backend). La siguiente,
+`terravid-mobile.web.app` (proyecto `terravid-24041`), redirige con un 301 a
+`terravid-app.web.app` hasta que se borre ese proyecto (M-015).
 
 Con Docker:
 
@@ -131,8 +134,10 @@ en cada push a `main`:
 
 1. **validate:** `tsc`, Jest con cobertura y un export web de prueba.
 2. **build-web:** `expo export` con la URL de producción.
-3. **deploy-firebase:** publica `dist/` en el sitio `terravid-mobile` de
-   Firebase Hosting y verifica que responda.
+3. **deploy-firebase:** publica `dist/` en el sitio `terravid-app` de
+   Firebase Hosting y verifica que responda. Entra a Google Cloud por
+   Workload Identity Federation con la cuenta `despliegue-firebase`, sin
+   claves.
 
 El resumen del job informa el estado real (antes decía "200 OK" aunque
 hubiera fallado).
@@ -141,7 +146,6 @@ hubiera fallado).
 
 | Secreto | Contenido |
 |---|---|
-| `FIREBASE_SERVICE_ACCOUNT_TERRAVID_24041` | JSON de la cuenta de servicio de Firebase (el mismo que usa el repo Web) |
 | `EXPO_PUBLIC_API_BASE_URL` | URL de la API |
 
 > El workflow todavía tiene la IP y el usuario como valores por defecto si
@@ -152,7 +156,7 @@ hubiera fallado).
 ## 5. Checklist antes de distribuir
 
 - [ ] `EXPO_PUBLIC_API_BASE_URL` de `eas.json` y del secreto del CI apuntan a la API de producción.
-- [ ] `CORS_ORIGIN` del backend incluye `https://terravid-mobile.web.app` (la PWA lo necesita; el APK no).
+- [ ] `CORS_ORIGIN` del backend incluye `https://terravid-app.web.app` (la PWA lo necesita; el APK no).
 - [ ] `version` de `app.json` incrementada.
 - [x] Proyecto de EAS vinculado (`projectId` en `app.json`) y `GOOGLE_SERVICES_JSON` cargado en EAS.
 - [ ] Prueba en un teléfono real: registrar en modo avión, volver a tener señal y verificar que suba solo.
