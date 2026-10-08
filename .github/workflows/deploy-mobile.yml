@@ -76,14 +76,17 @@ jobs:
           path: dist/
           retention-days: 7
 
-  # La PWA se publica en Firebase Hosting (sitio terravid-mobile del proyecto
-  # terravid-24041, el mismo de la Web). Antes iba por SSH a la VM; la copia de
-  # la VM queda sin actualizar y sirve la última versión (M-014).
+  # La PWA se publica en Firebase Hosting (sitio terravid-app del proyecto
+  # terravid, el mismo de la Web y de la VM; M-014, M-015). Se autentica por
+  # Workload Identity Federation, sin claves guardadas en el repositorio.
   deploy-firebase:
     name: Despliegue en Firebase Hosting
     needs: build-web
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -94,18 +97,19 @@ jobs:
           name: web-dist
           path: dist
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Autenticar contra Google Cloud
+        uses: google-github-actions/auth@v3
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TERRAVID_24041 }}
-          channelId: live
-          projectId: terravid-24041
-          target: terravid-mobile
+          project_id: terravid
+          workload_identity_provider: projects/286067019564/locations/global/workloadIdentityPools/github/providers/terravidmza
+          service_account: despliegue-firebase@terravid.iam.gserviceaccount.com
+
+      - name: Deploy to Firebase Hosting
+        run: npx --yes firebase-tools@15 deploy --only hosting --project terravid --non-interactive
 
       - name: Post-Deployment Health Check
         run: |
-          curl --retry 5 --retry-delay 3 --retry-all-errors -I -f https://terravid-mobile.web.app
+          curl --retry 5 --retry-delay 3 --retry-all-errors -I -f https://terravid-app.web.app
 
       - name: Publish Deployment Summary
         if: always()
@@ -118,7 +122,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Recurso | Valor |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| URL | https://terravid-mobile.web.app |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://terravid-app.web.app |" >> $GITHUB_STEP_SUMMARY
           echo "| Rama | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Estado | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY

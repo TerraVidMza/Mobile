@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "terravid-mobile",
+    "site": "terravid-app",
     "public": "dist",
     "ignore": [
       "firebase.json",

@@ -161,7 +161,7 @@ Para más detalles sobre la arquitectura de testing, consultar [`TESTING.md`](TE
 | Canal | Dónde | Cómo se publica |
 |---|---|---|
 | APK de Android | EAS Build, proyecto `@sergixfarias/terravid-mobile` | `eas build --platform android --profile production` (M-012) |
-| PWA | Firebase Hosting, `https://terravid-mobile.web.app` | Automático en cada push a `main` (M-014) |
+| PWA | Firebase Hosting, `https://terravid-app.web.app` | Automático en cada push a `main` (M-014) |
 
 El workflow de GitHub Actions valida tipos, corre las pruebas, exporta la PWA y la publica. El detalle (credenciales, keystore, notificaciones push, caché de la PWA) está en [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
