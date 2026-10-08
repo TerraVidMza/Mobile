@@ -390,3 +390,38 @@ necesita la VM.
 Mosquitto (MQTT por TCP, puerto 8883) y usa Postgres. Firebase Hosting y
 Cloud Run no aceptan TCP directo, y Cloud SQL cuesta más que la e2-micro, que
 entra en la capa gratuita. El backend, Postgres y Mosquitto siguen en la VM.
+- *Actualización:* el sitio y el proyecto cambiaron con M-015.
+
+---
+
+## M-015 — La PWA y el push pasan al proyecto `terravid`
+
+**Contexto.** La VM y el backend estaban en el proyecto de Google Cloud
+`terravid`, y la Web, la PWA y FCM en el proyecto de Firebase
+`terravid-24041`, de otra cuenta. D-033 del repo Backend unifica todo en
+`terravid`.
+
+**Decisión.**
+
+- La PWA se publica en el sitio **`terravid-app`** del proyecto `terravid`
+  (`https://terravid-app.web.app`). No se pudo reusar el nombre
+  `terravid-mobile`: los ID de sitio son únicos en todo Firebase y ese lo
+  sigue teniendo el proyecto viejo. `mobile.terravid.web.app` tampoco es
+  posible (el ID es una sola etiqueta, sin puntos); una dirección así necesita
+  dominio propio.
+- El job `deploy-firebase` se autentica con **Workload Identity Federation**
+  (cuenta `despliegue-firebase`, solo Hosting) y despliega con
+  `firebase-tools`. El secret `FIREBASE_SERVICE_ACCOUNT_TERRAVID_24041` deja de
+  usarse.
+- La app Android `com.terravidmza.mobile` se registró en `terravid`; el
+  `google-services.json` nuevo reemplaza al anterior en la variable
+  `GOOGLE_SERVICES_JSON` de EAS. Los APK compilados antes siguen registrando
+  sus tokens en `terravid-24041`, así que **hay que instalar un APK nuevo** en
+  cada teléfono para seguir recibiendo push.
+- `terravid-mobile.web.app` responde con un 301 a `terravid-app.web.app`
+  durante 7 días y después se borra el proyecto viejo.
+
+**Costo asumido.** La base local de la PWA vive en el navegador y depende del
+origen: cambiar de dirección es empezar con una base vacía. **Antes del corte,
+cada PWA instalada tiene que sincronizar sus pendientes** (o sacar un respaldo,
+M-008) y después instalarse desde la dirección nueva.
