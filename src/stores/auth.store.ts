@@ -17,7 +17,6 @@ import {
   registrarAlRenovar,
   vencimientoDelToken,
 } from '../services/sesion.service';
-import { catalogosSyncService } from '../services/catalogos-sync.service';
 import { useCatalogosStore } from './catalogos.store';
 import type { AuthUser } from '../types/api.types';
 import { MENSAJE_SIN_ACCESO_MOVIL, puede } from '../utils/permisos';
@@ -96,13 +95,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // labores/pesajes pendientes para subir, así que una sesión nueva sin
       // nada local (login recién hecho) se quedaba con los selectores de
       // Finca/Cuartel/Tipo de Labor vacíos hasta el primer pull-to-refresh.
-      // No debe tumbar el login si falla (ej. sin conexión): ya hay sesión.
+      // No tumba el login si falla (ej. sin conexión): ya hay sesión. Queda
+      // marcado `catalogosIncompletos` y se reintenta al volver la señal (M-016).
       try {
-        await catalogosSyncService.syncAll();
-        await useCatalogosStore.getState().loadFromLocalDb();
+        await useCatalogosStore.getState().syncWithServer();
       } catch {
-        // Sin conexión al loguearse: los selectores quedan vacíos hasta el
-        // próximo pull-to-refresh o reconexión, que sí reintentan la sync.
+        // Ningún error de catálogos debe convertirse en "Error de conexión".
       }
     } catch (error: unknown) {
       if (error instanceof Error && error.message === MENSAJE_SIN_ACCESO_MOVIL) {

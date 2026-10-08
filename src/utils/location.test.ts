@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import { capturarCoordenadasGPS, formatearCoordenadas } from './location';
 
 const expoLocation = {
+  getForegroundPermissionsAsync: jest.fn(),
   requestForegroundPermissionsAsync: jest.fn(),
   getCurrentPositionAsync: jest.fn(),
   Accuracy: { Balanced: 3 },
@@ -58,26 +59,69 @@ describe('capturarCoordenadasGPS', () => {
       (Platform as { OS: string }).OS = 'android';
     });
 
-    it('sin permiso no pide la posición', async () => {
-      expoLocation.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' });
-      expect(await capturarCoordenadasGPS()).toBeNull();
-      expect(expoLocation.getCurrentPositionAsync).not.toHaveBeenCalled();
-    });
+    afterEach(() => jest.useRealTimers());
 
-    it('con permiso devuelve la posición', async () => {
-      expoLocation.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
-      expoLocation.getCurrentPositionAsync.mockResolvedValue({
-        coords: { latitude: -33.1, longitude: -68.2, accuracy: null },
+    const posicion = { coords: { latitude: -33.1, longitude: -68.2, accuracy: null } };
+
+    it('con permiso ya concedido no lo vuelve a pedir', async () => {
+      // Android 17 no contesta un pedido sin nada que preguntar (M-016).
+      expoLocation.getForegroundPermissionsAsync.mockResolvedValue({
+        status: 'granted',
+        canAskAgain: true,
       });
+      expoLocation.getCurrentPositionAsync.mockResolvedValue(posicion);
       expect(await capturarCoordenadasGPS()).toEqual({
         latitud: -33.1,
         longitud: -68.2,
         precisionMetros: undefined,
       });
+      expect(expoLocation.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it('sin permiso lo pide y, si lo da, devuelve la posición', async () => {
+      expoLocation.getForegroundPermissionsAsync.mockResolvedValue({
+        status: 'undetermined',
+        canAskAgain: true,
+      });
+      expoLocation.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'granted' });
+      expoLocation.getCurrentPositionAsync.mockResolvedValue(posicion);
+      expect(await capturarCoordenadasGPS()).not.toBeNull();
+      expect(expoLocation.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('si niega el permiso no pide la posición', async () => {
+      expoLocation.getForegroundPermissionsAsync.mockResolvedValue({
+        status: 'undetermined',
+        canAskAgain: true,
+      });
+      expoLocation.requestForegroundPermissionsAsync.mockResolvedValue({ status: 'denied' });
+      expect(await capturarCoordenadasGPS()).toBeNull();
+      expect(expoLocation.getCurrentPositionAsync).not.toHaveBeenCalled();
+    });
+
+    it('si el permiso quedó negado para siempre no lo pide', async () => {
+      expoLocation.getForegroundPermissionsAsync.mockResolvedValue({
+        status: 'denied',
+        canAskAgain: false,
+      });
+      expect(await capturarCoordenadasGPS()).toBeNull();
+      expect(expoLocation.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    });
+
+    it('si el pedido de permiso no contesta, sigue sin coordenadas', async () => {
+      jest.useFakeTimers();
+      expoLocation.getForegroundPermissionsAsync.mockResolvedValue({
+        status: 'undetermined',
+        canAskAgain: true,
+      });
+      expoLocation.requestForegroundPermissionsAsync.mockReturnValue(new Promise(() => {}));
+      const resultado = capturarCoordenadasGPS();
+      await jest.advanceTimersByTimeAsync(30_000);
+      expect(await resultado).toBeNull();
     });
 
     it('si el GPS falla devuelve null en vez de lanzar', async () => {
-      expoLocation.requestForegroundPermissionsAsync.mockRejectedValue(new Error('sin GPS'));
+      expoLocation.getForegroundPermissionsAsync.mockRejectedValue(new Error('sin GPS'));
       expect(await capturarCoordenadasGPS()).toBeNull();
     });
   });

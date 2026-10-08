@@ -84,6 +84,31 @@ describe('useCatalogosStore (100% Coverage)', () => {
     expect(useCatalogosStore.getState().isSyncing).toBe(false);
   });
 
+  it('una descarga incompleta recarga lo que llegó y queda marcada (M-016)', async () => {
+    (catalogosSyncService.syncAll as jest.Mock).mockResolvedValue({ success: false });
+    (catalogosRepo.getFincas as jest.Mock).mockResolvedValue(mockFincas);
+    (catalogosRepo.getTiposLabor as jest.Mock).mockResolvedValue(mockTipos);
+    (catalogosRepo.getInsumos as jest.Mock).mockResolvedValue(mockInsumos);
+
+    await useCatalogosStore.getState().syncWithServer();
+    expect(useCatalogosStore.getState().catalogosIncompletos).toBe(true);
+    expect(useCatalogosStore.getState().fincas).toEqual(mockFincas);
+
+    (catalogosSyncService.syncAll as jest.Mock).mockResolvedValue({ success: true });
+    await useCatalogosStore.getState().syncWithServer();
+    expect(useCatalogosStore.getState().catalogosIncompletos).toBe(false);
+  });
+
+  it('si falla la base local conserva lo que había en memoria', async () => {
+    (catalogosSyncService.syncAll as jest.Mock).mockResolvedValue({ success: true });
+    (catalogosRepo.getFincas as jest.Mock).mockRejectedValue(new Error('SQLite error'));
+    useCatalogosStore.setState({ fincas: mockFincas });
+
+    expect(await useCatalogosStore.getState().syncWithServer()).toBe(true);
+    expect(useCatalogosStore.getState().fincas).toEqual(mockFincas);
+    expect(useCatalogosStore.getState().isSyncing).toBe(false);
+  });
+
   it('debe consultar cuarteles y cuadrillas por finca', async () => {
     (catalogosRepo.getCuartelesByFinca as jest.Mock).mockResolvedValue(mockCuarteles);
     (catalogosRepo.getCuadrillasByFinca as jest.Mock).mockResolvedValue(mockCuadrillas);

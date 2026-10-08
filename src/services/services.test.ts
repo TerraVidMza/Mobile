@@ -213,9 +213,15 @@ describe('API Services Layer (100% Coverage)', () => {
       expect(catalogosRepo.saveCuadrillas).toHaveBeenCalled();
     });
 
-    it('debe manejar errores en sub-consultas y continuar con las demás', async () => {
+    it('si falla una finca guarda las demás pero no informa éxito (M-016)', async () => {
       (api.get as jest.Mock).mockImplementation((url: string) => {
-        if (url === '/fincas') return Promise.resolve({ data: [{ id: 'f-1' }, { id: 'f-2' }] });
+        if (url === '/fincas')
+          return Promise.resolve({
+            data: [
+              { id: 'f-1', nombre: 'Finca Uno' },
+              { id: 'f-2', nombre: 'Finca Dos' },
+            ],
+          });
         if (url.includes('f-1')) return Promise.reject(new Error('Finca 1 not found'));
         if (url.includes('f-2')) return Promise.resolve({ data: [{ id: 'c-2' }] });
         if (url === '/tipos-labor') return Promise.resolve({ data: [] });
@@ -224,7 +230,12 @@ describe('API Services Layer (100% Coverage)', () => {
       });
 
       const res = await catalogosSyncService.syncAll();
-      expect(res.success).toBe(true);
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('No se pudieron descargar los datos de: Finca Uno');
+      expect(catalogosRepo.saveCuarteles).toHaveBeenCalledWith([
+        expect.objectContaining({ id: 'c-2' }),
+      ]);
+      expect(catalogosRepo.saveInsumos).toHaveBeenCalled();
     });
 
     it('debe capturar error global al fallar fincas', async () => {

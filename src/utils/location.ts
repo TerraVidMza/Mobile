@@ -10,6 +10,11 @@
  *
  * La versión anterior usaba `navigator.geolocation` también en nativo, donde no
  * existe, y nadie la llamaba.
+ *
+ * En nativo primero se consulta el permiso y solo se pide si falta (M-016).
+ * `requestForegroundPermissionsAsync` le pasa el pedido a Android aunque ya
+ * esté concedido; Android 17 no contesta un pedido sin nada que preguntar y la
+ * promesa no terminaba nunca, con lo que "Guardar" quedaba cargando.
  */
 
 import { Platform } from 'react-native';
@@ -21,12 +26,17 @@ export interface CoordenadasGPS {
 }
 
 const TIEMPO_MAXIMO_MS = 8_000;
+/** El diálogo de permiso lo contesta una persona: se le da más tiempo. */
+const TIEMPO_MAXIMO_PERMISO_MS = 30_000;
 
-function conTiempoMaximo<T>(promesa: Promise<T>): Promise<T | null> {
+function conTiempoMaximo<T>(promesa: Promise<T>, ms = TIEMPO_MAXIMO_MS): Promise<T | null> {
+  let temporizador: ReturnType<typeof setTimeout> | undefined;
   return Promise.race([
     promesa,
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), TIEMPO_MAXIMO_MS)),
-  ]);
+    new Promise<null>((resolve) => {
+      temporizador = setTimeout(() => resolve(null), ms);
+    }),
+  ]).finally(() => clearTimeout(temporizador));
 }
 
 const redondear = (n: number) => Number(n.toFixed(7));
@@ -34,8 +44,16 @@ const redondear = (n: number) => Number(n.toFixed(7));
 async function capturarNativo(): Promise<CoordenadasGPS | null> {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Location = require('expo-location') as typeof import('expo-location');
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') return null;
+  const actual = await conTiempoMaximo(Location.getForegroundPermissionsAsync());
+  if (!actual) return null;
+  if (actual.status !== 'granted') {
+    if (!actual.canAskAgain) return null;
+    const pedido = await conTiempoMaximo(
+      Location.requestForegroundPermissionsAsync(),
+      TIEMPO_MAXIMO_PERMISO_MS,
+    );
+    if (pedido?.status !== 'granted') return null;
+  }
   const pos = await conTiempoMaximo(
     Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
   );

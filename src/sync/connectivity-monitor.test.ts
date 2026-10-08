@@ -7,6 +7,7 @@ import { initConnectivityMonitor } from './connectivity-monitor';
 import { syncEngine } from './sync-engine';
 import { useSyncStore } from '../stores/sync.store';
 import { useAuthStore } from '../stores/auth.store';
+import { useCatalogosStore } from '../stores/catalogos.store';
 
 jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(),
@@ -15,6 +16,15 @@ jest.mock('./sync-engine');
 jest.mock('../stores/auth.store', () => {
   const { create } = jest.requireActual('zustand');
   return { useAuthStore: create(() => ({ isAuthenticated: true })) };
+});
+jest.mock('../stores/catalogos.store', () => {
+  const { create } = jest.requireActual('zustand');
+  return {
+    useCatalogosStore: create(() => ({
+      catalogosIncompletos: false,
+      syncWithServer: jest.fn().mockResolvedValue(true),
+    })),
+  };
 });
 
 describe('connectivityMonitor (100% Coverage)', () => {
@@ -25,6 +35,7 @@ describe('connectivityMonitor (100% Coverage)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAuthStore.setState({ isAuthenticated: true });
+    useCatalogosStore.setState({ catalogosIncompletos: false });
     jest.useFakeTimers();
     (NetInfo.addEventListener as jest.Mock).mockImplementation((cb) => {
       netInfoCallback = cb;
@@ -55,6 +66,21 @@ describe('connectivityMonitor (100% Coverage)', () => {
     netInfoCallback({ isConnected: true, isInternetReachable: true });
     jest.advanceTimersByTime(1500);
     expect(syncEngine.runSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('al volver la señal repite la descarga de catálogos si quedó incompleta (M-016)', () => {
+    useCatalogosStore.setState({ catalogosIncompletos: true });
+    unsubscribe = initConnectivityMonitor();
+    netInfoCallback({ isConnected: true, isInternetReachable: true });
+    jest.advanceTimersByTime(1500);
+    expect(useCatalogosStore.getState().syncWithServer).toHaveBeenCalledTimes(1);
+  });
+
+  it('con los catálogos completos no los vuelve a descargar', () => {
+    unsubscribe = initConnectivityMonitor();
+    netInfoCallback({ isConnected: true, isInternetReachable: true });
+    jest.advanceTimersByTime(1500);
+    expect(useCatalogosStore.getState().syncWithServer).not.toHaveBeenCalled();
   });
 
   it('no sincroniza sin sesión', () => {

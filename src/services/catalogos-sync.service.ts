@@ -19,6 +19,10 @@ export const catalogosSyncService = {
   /**
    * Descarga todos los catálogos desde el backend y los guarda en SQLite.
    * Se ejecuta automáticamente al login y post-sincronización exitosa.
+   *
+   * Si falla una finca se sigue con las demás y se guarda lo que llegó, pero
+   * el resultado es `success: false` (M-016): antes se informaba éxito y una
+   * finca podía quedar sin cuarteles en el teléfono sin que nadie se enterara.
    */
   async syncAll(): Promise<{ success: boolean; error?: string }> {
     try {
@@ -29,6 +33,7 @@ export const catalogosSyncService = {
       // 2. Descargar cuarteles y cuadrillas para cada finca
       const allCuarteles: Cuartel[] = [];
       const allCuadrillas: Cuadrilla[] = [];
+      const fincasConError: string[] = [];
 
       for (const finca of fincas) {
         try {
@@ -36,6 +41,7 @@ export const catalogosSyncService = {
           allCuarteles.push(...cuarteles);
         } catch {
           // Si falla una finca individual, continuamos con las demás
+          fincasConError.push(finca.nombre);
         }
 
         try {
@@ -43,6 +49,7 @@ export const catalogosSyncService = {
           allCuadrillas.push(...cuadrillas);
         } catch {
           // Idem
+          if (!fincasConError.includes(finca.nombre)) fincasConError.push(finca.nombre);
         }
       }
 
@@ -60,6 +67,12 @@ export const catalogosSyncService = {
       const insumos = await insumosService.getAll();
       await catalogosRepo.saveInsumos(insumos);
 
+      if (fincasConError.length > 0) {
+        return {
+          success: false,
+          error: `No se pudieron descargar los datos de: ${fincasConError.join(', ')}`,
+        };
+      }
       return { success: true };
     } catch (error: unknown) {
       const message =

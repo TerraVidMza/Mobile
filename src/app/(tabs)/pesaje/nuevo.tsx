@@ -44,6 +44,8 @@ export default function NuevoPesajeScreen() {
   const [selectedFincaId, setSelectedFincaId] = useState<string>('');
   const [cuartelesDisponibles, setCuartelesDisponibles] = useState<Cuartel[]>([]);
   const [cuadrillasDisponibles, setCuadrillasDisponibles] = useState<Cuadrilla[]>([]);
+  /** Finca a la que corresponden las listas cargadas; evita avisar mientras carga. */
+  const [listasDe, setListasDe] = useState<string>('');
   const [selectedCuartelId, setSelectedCuartelId] = useState<string>('');
   const [selectedCuadrillaId, setSelectedCuadrillaId] = useState<string>('');
   const [fecha, setFecha] = useState<string>(hoyLocal());
@@ -67,8 +69,14 @@ export default function NuevoPesajeScreen() {
 
   useEffect(() => {
     if (selectedFincaId) {
-      getCuartelesByFinca(selectedFincaId).then(setCuartelesDisponibles);
-      getCuadrillasByFinca(selectedFincaId).then(setCuadrillasDisponibles);
+      Promise.all([
+        getCuartelesByFinca(selectedFincaId),
+        getCuadrillasByFinca(selectedFincaId),
+      ]).then(([cuarteles, cuadrillas]) => {
+        setCuartelesDisponibles(cuarteles);
+        setCuadrillasDisponibles(cuadrillas);
+        setListasDe(selectedFincaId);
+      });
       setSelectedCuartelId('');
       setSelectedCuadrillaId('');
     } else {
@@ -269,6 +277,14 @@ export default function NuevoPesajeScreen() {
           ))}
         </Menu>
         {errors.cuartel && <HelperText type="error">{errors.cuartel}</HelperText>}
+        {!!selectedFincaId &&
+          listasDe === selectedFincaId &&
+          (cuartelesDisponibles.length === 0 || cuadrillasDisponibles.length === 0) && (
+            <HelperText type="info" testID="aviso-sin-cuarteles">
+              Faltan cuarteles o cuadrillas de esta finca en el teléfono. Con señal, deslizá
+              hacia abajo en la lista para actualizar los datos.
+            </HelperText>
+          )}
       </View>
 
       {/* Fecha */}

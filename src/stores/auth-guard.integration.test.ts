@@ -19,7 +19,9 @@ jest.mock('../services/catalogos-sync.service', () => ({
   catalogosSyncService: { syncAll: jest.fn().mockResolvedValue({ success: true }) },
 }));
 jest.mock('./catalogos.store', () => ({
-  useCatalogosStore: { getState: () => ({ loadFromLocalDb: jest.fn().mockResolvedValue(undefined) }) },
+  useCatalogosStore: {
+    getState: () => ({ syncWithServer: jest.fn().mockResolvedValue(true) }),
+  },
 }));
 
 describe('AuthGuard & Session Security Integration Test', () => {
