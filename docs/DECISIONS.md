@@ -361,6 +361,25 @@ El job no levanta un backend propio: hace falta una API con datos de prueba.
 Los flujos no se corrieron todavía en un emulador; queda como verificación
 manual antes de la entrega.
 
+**Actualización (primera corrida, 2026-10-08).** Los cuatro flujos pasan en un
+emulador Android 14 (API 34) con una APK `preview` de `main`, contra la API de
+producción y un capataz de prueba (4/4 en 4 min 18 s). Lo que apareció:
+
+- La APK anterior (versionCode 3) se había compilado antes de los `testID`;
+  hubo que compilar otra. Antes de correr los flujos conviene confirmar que la
+  APK los trae (`input-email` en `assets/index.android.bundle`).
+- `04-offline-sync` fallaba porque el login muestra el inicio antes de que
+  terminen de bajar los catálogos, y el flujo cortaba la señal en ese momento.
+  `catalogos-sync.service.ts` ignora el error de cada finca, así que los
+  cuarteles quedaban vacíos sin aviso. El flujo ahora refresca los catálogos
+  y confirma que el cuartel está en el teléfono antes de pasar a modo avión.
+  En la app el riesgo existe igual: quien pierde la señal justo después de
+  entrar se queda sin cuarteles hasta el próximo refresco.
+- En un emulador Android 17 (API 37) el guardado de una labor queda cargando
+  sin terminar y no se guarda nada, con o sin permiso de ubicación. En
+  Android 14 la misma APK funciona. No se investigó la causa (Expo SDK 52 es
+  anterior a Android 17); los flujos se corren en API 34.
+
 ---
 
 ## M-014 — La PWA se publica en Firebase Hosting, junto a la Web

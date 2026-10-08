@@ -56,8 +56,8 @@ subflujos en `.maestro/subflows/` (login y carga de labor). Se corren a mano
 
 ### Qué necesitan
 
-- Un emulador Android (o teléfono por USB) con la app instalada, apuntando a
-  una API con datos (`EXPO_PUBLIC_API_BASE_URL` al compilar; por defecto
+- Un emulador Android 14 (API 34) o un teléfono por USB con la app instalada,
+  apuntando a una API con datos (`EXPO_PUBLIC_API_BASE_URL` al compilar; por defecto
   `http://10.0.2.2:3000/api`, el backend local visto desde el emulador).
 - Un usuario capataz con `labores:registrar` y `pesajes:registrar`, que no
   tenga que cambiar la contraseña al entrar.
@@ -92,7 +92,12 @@ actualizar el flujo en el mismo cambio.
 Hasta M-013 los flujos no pasaban nunca: usaban otro `appId`, buscaban
 `testID` que la app no definía, esperaban textos que habían cambiado
 ("Iniciar Sesión", "Labores del Día") y traían datos fijos de una base que no
-existe. Se reescribieron contra la app real; falta correrlos en un emulador.
+existe. Se reescribieron contra la app real.
+
+La primera corrida completa fue el 2026-10-08: 4/4 en un emulador Android 14
+con la APK `preview` de `main`, contra producción. En Android 17 (API 37) el
+guardado de labores se cuelga, por eso se usa API 34. La APK tiene que traer
+los `testID`; una compilada antes de M-013 no los tiene. Detalle en M-013.
 El camino de punta a punta contra el backend real también está cubierto por
 los e2e del backend (`test/recorrido-api.e2e-spec.ts`, sincronización) y por
 Playwright en la Web.
