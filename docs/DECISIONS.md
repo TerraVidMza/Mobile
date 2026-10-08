@@ -382,6 +382,8 @@ necesita la VM.
 - La copia de la VM no se borra: sigue sirviendo la última versión. La base
   local de la PWA vive en el navegador y depende del dominio; quien la tenga
   instalada desde `duckdns` debe sincronizar ahí y después instalar la nueva.
+  *Actualización:* la copia de la VM se dio de baja; el dominio redirige a
+  `terravid-mobile.web.app` (D-032 del repo Backend).
 - El backend tiene que aceptar el origen nuevo en `CORS_ORIGIN`.
 
 **Por qué no todo en Firebase.** El backend mantiene una conexión fija con

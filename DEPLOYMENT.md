@@ -112,9 +112,9 @@ nunca); el `.wasm` de SQLite y los íconos no tienen hash, así que tampoco.
 [`nginx.conf`](nginx.conf) (imagen Docker alternativa) sigue las mismas reglas
 para los archivos clave.
 
-La copia anterior en la VM (`terravid-mobile.duckdns.org`, servida por Caddy
-desde `/opt/terravid/mobile`) ya no se actualiza: queda con la última versión
-para que quien la tenga instalada pueda sincronizar lo pendiente.
+La PWA vieja de la VM (`terravid-mobile.duckdns.org`) está dada de baja: Caddy
+redirige ese dominio a `https://terravid-mobile.web.app` y desinstala el
+service worker viejo (D-032 del repo Backend).
 
 Con Docker:
 
