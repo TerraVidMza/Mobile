@@ -6,6 +6,26 @@ tags:
   - sync
 ---
 - runFlow: subflows/login.yaml
+# El login entra al inicio antes de que terminen de bajar los catálogos; si
+# se corta la señal en ese momento, los cuarteles quedan vacíos. Se refresca
+# con pull-to-refresh y se confirma que el cuartel ya está en el teléfono.
+- tapOn:
+    id: "tab-labores"
+- swipe:
+    start: 50%, 35%
+    end: 50%, 80%
+- waitForAnimationToEnd:
+    timeout: 15000
+- tapOn:
+    id: "fab-nueva-labor"
+- tapOn:
+    id: "selector-finca"
+- tapOn: ${FINCA}
+- tapOn:
+    id: "selector-cuartel"
+- assertVisible: ${CUARTEL + '.*'}
+- back
+- back
 - setAirplaneMode: enabled
 - extendedWaitUntil:
     visible:
