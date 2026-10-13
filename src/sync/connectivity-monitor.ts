@@ -9,12 +9,16 @@
  *   anterior no espera a que se corte y vuelva la señal.
  * - Al iniciar sesión.
  *
+ * Si la última descarga de catálogos quedó incompleta (por ejemplo, se cortó
+ * la señal justo después del login), también la repite (M-016).
+ *
  * Sin conexión o sin sesión se cancela el reintento programado.
  */
 
 import NetInfo from '@react-native-community/netinfo';
 import { useSyncStore } from '../stores/sync.store';
 import { useAuthStore } from '../stores/auth.store';
+import { useCatalogosStore } from '../stores/catalogos.store';
 import { syncEngine } from './sync-engine';
 
 let _unsubscribe: (() => void) | null = null;
@@ -24,6 +28,9 @@ let _wasOffline = true;
 function sincronizarSiCorresponde(): void {
   if (useAuthStore.getState().isAuthenticated && useSyncStore.getState().isConnected) {
     void syncEngine.runSync();
+    if (useCatalogosStore.getState().catalogosIncompletos) {
+      void useCatalogosStore.getState().syncWithServer();
+    }
   }
 }
 

@@ -16,6 +16,11 @@ interface CatalogosState {
   insumos: Insumo[];
   isLoading: boolean;
   isSyncing: boolean;
+  /**
+   * La última descarga no terminó (sin señal o falló alguna finca): puede
+   * faltar algún cuartel o cuadrilla. Se reintenta al volver la señal (M-016).
+   */
+  catalogosIncompletos: boolean;
 
   /** Carga los catálogos desde SQLite local a memoria. */
   loadFromLocalDb: () => Promise<void>;
@@ -33,6 +38,7 @@ export const useCatalogosStore = create<CatalogosState>((set) => ({
   insumos: [],
   isLoading: false,
   isSyncing: false,
+  catalogosIncompletos: false,
 
   loadFromLocalDb: async () => {
     set({ isLoading: true });
@@ -57,18 +63,19 @@ export const useCatalogosStore = create<CatalogosState>((set) => ({
   syncWithServer: async () => {
     set({ isSyncing: true });
     const result = await catalogosSyncService.syncAll();
-    if (result.success) {
-      // Recargar memoria desde DB local actualizada
+    // Aun si falló, lo que llegó ya está en la base local: se recarga igual.
+    try {
       const [fincas, tiposLabor, insumos] = await Promise.all([
         catalogosRepo.getFincas(),
         catalogosRepo.getTiposLabor(),
         catalogosRepo.getInsumos(),
       ]);
-      set({ fincas, tiposLabor, insumos, isSyncing: false });
-      return true;
+      set({ fincas, tiposLabor, insumos });
+    } catch {
+      // Se conserva lo que había en memoria.
     }
-    set({ isSyncing: false });
-    return false;
+    set({ isSyncing: false, catalogosIncompletos: !result.success });
+    return result.success;
   },
 
   getCuartelesByFinca: async (fincaId: string) => {

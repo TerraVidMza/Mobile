@@ -21,6 +21,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-012 | Distribución por APK y PWA, sin tiendas | ✅ Implementada |
 | M-013 | Los E2E de Maestro quedan en ejecución manual | ✅ Implementada |
 | M-014 | La PWA se publica en Firebase Hosting, junto a la Web | ✅ Implementada |
+| M-016 | Permiso de ubicación sin colgar el guardado y catálogos incompletos a la vista | ✅ Implementada |
 
 ---
 
@@ -374,11 +375,14 @@ producción y un capataz de prueba (4/4 en 4 min 18 s). Lo que apareció:
   cuarteles quedaban vacíos sin aviso. El flujo ahora refresca los catálogos
   y confirma que el cuartel está en el teléfono antes de pasar a modo avión.
   En la app el riesgo existe igual: quien pierde la señal justo después de
-  entrar se queda sin cuarteles hasta el próximo refresco.
+  entrar se queda sin cuarteles hasta el próximo refresco. *Actualización:* M-016 reintenta
+  la descarga al volver la señal y avisa en el formulario.
 - En un emulador Android 17 (API 37) el guardado de una labor queda cargando
   sin terminar y no se guarda nada, con o sin permiso de ubicación. En
   Android 14 la misma APK funciona. No se investigó la causa (Expo SDK 52 es
   anterior a Android 17); los flujos se corren en API 34.
+  *Actualización:* la causa era el pedido del permiso de ubicación; se
+  corrigió en M-016.
 
 ---
 
@@ -444,3 +448,44 @@ entra en la capa gratuita. El backend, Postgres y Mosquitto siguen en la VM.
 origen: cambiar de dirección es empezar con una base vacía. **Antes del corte,
 cada PWA instalada tiene que sincronizar sus pendientes** (o sacar un respaldo,
 M-008) y después instalarse desde la dirección nueva.
+
+---
+
+## M-016 — Permiso de ubicación sin colgar el guardado y catálogos incompletos a la vista
+
+**Contexto.** La primera corrida de Maestro (M-013) mostró dos fallas de la
+app.
+
+1. En Android 17 (API 37), "Guardar" de una labor o un pesaje quedaba
+   cargando para siempre y no se guardaba nada. `capturarCoordenadasGPS`
+   llamaba a `requestForegroundPermissionsAsync` en cada guardado. Expo le pasa
+   el pedido a Android aunque el permiso ya esté concedido
+   (`PermissionsService.kt` de `expo-modules-core`). Android 17 registra
+   `No requestable permission in the request` y no contesta, así que la
+   promesa no termina. El tope de 8 s cubría solo la lectura de la posición,
+   no el pedido de permiso.
+2. `catalogosSyncService.syncAll` ignoraba el error de cada finca y devolvía
+   `success: true`. Además nunca lanza, así que el `catch` del login no se
+   ejecutaba nunca. Si la señal se cortaba justo después de entrar, una finca
+   quedaba sin cuarteles en el teléfono, sin aviso y sin reintento: al volver
+   la señal, `runSync` solo baja catálogos si subió algún registro.
+
+**Decisión.**
+
+- `location.ts` consulta el permiso con `getForegroundPermissionsAsync` y solo
+  lo pide si falta y se puede volver a preguntar. El pedido tiene su propio
+  tope (30 s, porque lo contesta una persona) y la consulta el de 8 s. El
+  guardado nunca espera más que eso.
+- `syncAll` sigue con las demás fincas y guarda lo que llegó, pero devuelve
+  `success: false` con los nombres de las fincas que fallaron.
+- `useCatalogosStore.syncWithServer` recarga la base local aunque la descarga
+  falle y deja `catalogosIncompletos`. El login usa el store y, si algo falla,
+  no lo convierte en "Error de conexión".
+- Al volver la señal, el monitor de conectividad repite la descarga si
+  `catalogosIncompletos` está activo.
+- "Nueva labor" y "Nuevo pesaje" muestran un aviso (`aviso-sin-cuarteles`)
+  cuando la finca elegida no tiene cuarteles (o cuadrillas, en el pesaje) en
+  el teléfono, con la indicación de actualizar con señal.
+
+**Fuera de alcance.** Expo SDK 52 no declara soporte para Android 17; esta
+corrección evita el pedido innecesario, pero no reemplaza actualizar el SDK.

@@ -96,7 +96,7 @@ existe. Se reescribieron contra la app real.
 
 La primera corrida completa fue el 2026-10-08: 4/4 en un emulador Android 14
 con la APK `preview` de `main`, contra producción. En Android 17 (API 37) el
-guardado de labores se cuelga, por eso se usa API 34. La APK tiene que traer
+guardado de labores se colgaba; lo corrigió M-016. La APK tiene que traer
 los `testID`; una compilada antes de M-013 no los tiene. Detalle en M-013.
 El camino de punta a punta contra el backend real también está cubierto por
 los e2e del backend (`test/recorrido-api.e2e-spec.ts`, sincronización) y por
