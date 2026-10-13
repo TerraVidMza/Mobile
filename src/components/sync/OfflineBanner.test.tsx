@@ -2,7 +2,7 @@
  * Pruebas unitarias para OfflineBanner.
  */
 
-import renderer from 'react-test-renderer';
+import renderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { OfflineBanner } from './OfflineBanner';
 import { useSyncStore } from '../../stores/sync.store';
@@ -34,11 +34,15 @@ describe('OfflineBanner Component', () => {
 
   it('debe renderizar el banner de advertencia cuando el dispositivo pasa a offline', () => {
     useSyncStore.setState({ isConnected: false });
-    const component = renderer.create(
-      <PaperProvider>
-        <OfflineBanner />
-      </PaperProvider>,
-    );
+    // Con React 19 el render no se aplica hasta salir de act().
+    let component!: ReactTestRenderer;
+    act(() => {
+      component = renderer.create(
+        <PaperProvider>
+          <OfflineBanner />
+        </PaperProvider>,
+      );
+    });
 
     const text = getText(component.toJSON());
     expect(text).toContain('Sin conexión a internet');

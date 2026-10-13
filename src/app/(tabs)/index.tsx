@@ -11,7 +11,7 @@ import { useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Card, Text, Button, Chip, useTheme } from 'react-native-paper';
 import { useRouter, useFocusEffect } from 'expo-router';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuthStore } from '../../stores/auth.store';
 import { puede } from '../../utils/permisos';
 import { useSyncStore } from '../../stores/sync.store';

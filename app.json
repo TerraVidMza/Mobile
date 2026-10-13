@@ -7,7 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "terravid",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.terravidmza.mobile"
@@ -38,6 +37,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F5EFE0",
+          "imageWidth": 200
+        }
+      ],
       "expo-sqlite",
       "expo-secure-store",
       [
@@ -72,11 +80,6 @@
       "eas": {
         "projectId": "ef07a3b7-5dde-44ae-971c-29adc761e7ce"
       }
-    },
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F5EFE0"
     },
     "owner": "sergixfarias"
   }

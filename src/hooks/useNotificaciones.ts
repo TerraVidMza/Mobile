@@ -15,7 +15,9 @@ import { useAuthStore } from '../stores/auth.store';
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      // `shouldShowAlert` quedó obsoleto en expo-notifications 0.31: lo reemplazan
+      // `shouldShowBanner` y `shouldShowList`.
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
       shouldShowBanner: true,

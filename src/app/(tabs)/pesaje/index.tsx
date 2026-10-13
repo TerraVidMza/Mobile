@@ -14,7 +14,7 @@ import {
   SegmentedButtons,
 } from 'react-native-paper';
 import { useRouter, useFocusEffect } from 'expo-router';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { pesajesRepo } from '../../../db/repositories/pesajes.repo';
 import { syncEngine } from '../../../sync/sync-engine';
 import { EstadoSyncChip } from '../../../components/sync/EstadoSyncChip';

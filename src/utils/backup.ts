@@ -117,13 +117,18 @@ export async function compartirRespaldo(): Promise<BackupData> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const FileSystem = require('expo-file-system') as typeof import('expo-file-system');
+  const { File, Paths } = require('expo-file-system') as typeof import('expo-file-system');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Sharing = require('expo-sharing') as typeof import('expo-sharing');
-  const ruta = `${FileSystem.cacheDirectory}${nombre}`;
-  await FileSystem.writeAsStringAsync(ruta, contenido);
+  // API de archivos de expo-file-system 19 (SDK 54); la anterior quedó en /legacy.
+  const archivo = new File(Paths.cache, nombre);
+  archivo.create({ overwrite: true });
+  archivo.write(contenido);
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(ruta, { mimeType: 'application/json', dialogTitle: 'Respaldo de TerraVid' });
+    await Sharing.shareAsync(archivo.uri, {
+      mimeType: 'application/json',
+      dialogTitle: 'Respaldo de TerraVid',
+    });
   }
   return backup;
 }
