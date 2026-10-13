@@ -28,7 +28,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      syncEngine.updatePendingCount();
+      syncEngine.updatePendingCount().catch(() => {});
     }, []),
   );
 
@@ -132,7 +132,7 @@ export default function HomeScreen() {
         mode="outlined"
         icon="logout"
         onPress={async () => {
-          await haptics.selection();
+          haptics.selection();
           await logout();
         }}
         style={styles.logoutButton}

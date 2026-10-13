@@ -64,10 +64,10 @@ export default function DetalleLaborScreen() {
     setSyncing(true);
     try {
       await syncEngine.runSync();
-      await haptics.success();
+      haptics.success();
       await loadData();
     } catch {
-      await haptics.error();
+      haptics.error();
     } finally {
       setSyncing(false);
     }
@@ -84,7 +84,7 @@ export default function DetalleLaborScreen() {
     if (!eliminar) return;
     await laboresRepo.deleteLabor(id);
     await syncEngine.updatePendingCount();
-    await haptics.selection();
+    haptics.selection();
     router.back();
   }
 

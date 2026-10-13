@@ -59,14 +59,14 @@ export default function PesajesScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await haptics.selection();
+    haptics.selection();
     try {
       await syncEngine.runSync();
       await catalogosSyncService.syncAll();
       await loadData();
-      await haptics.success();
+      haptics.success();
     } catch {
-      await haptics.error();
+      haptics.error();
     } finally {
       setRefreshing(false);
     }

@@ -29,6 +29,7 @@ import { syncEngine } from '../../../sync/sync-engine';
 import { pesajesRepo } from '../../../db/repositories/pesajes.repo';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
+import { useCargaInicial } from '../../../hooks/useCargaInicial';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, Cuadrilla } from '../../../types/api.types';
 import { avisar } from '../../../utils/dialogos';
@@ -55,17 +56,9 @@ export default function NuevoPesajeScreen() {
   const [cuartelMenuVisible, setCuartelMenuVisible] = useState(false);
   const [cuadrillaMenuVisible, setCuadrillaMenuVisible] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const loading = useCargaInicial(loadFromLocalDb);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  useEffect(() => {
-    async function init() {
-      await loadFromLocalDb();
-      setLoading(false);
-    }
-    init();
-  }, [loadFromLocalDb]);
 
   useEffect(() => {
     if (selectedFincaId) {
@@ -134,7 +127,7 @@ export default function NuevoPesajeScreen() {
       incrementPending(1);
       // Con señal sube en el momento; sin señal queda pendiente (M-003).
       if (useSyncStore.getState().isConnected) void syncEngine.runSync();
-      await haptics.success();
+      haptics.success();
 
       await avisar(
         'Pesaje guardado',
@@ -142,7 +135,7 @@ export default function NuevoPesajeScreen() {
       );
       router.back();
     } catch {
-      await haptics.error();
+      haptics.error();
       void avisar('Error', 'No se pudo guardar el pesaje en el teléfono.');
     } finally {
       setSaving(false);
