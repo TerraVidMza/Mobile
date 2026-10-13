@@ -62,14 +62,17 @@ export default function NuevoPesajeScreen() {
 
   useEffect(() => {
     if (selectedFincaId) {
-      Promise.all([
+      // Si falla la lectura local quedan las listas vacías y el aviso de M-016.
+      void Promise.all([
         getCuartelesByFinca(selectedFincaId),
         getCuadrillasByFinca(selectedFincaId),
-      ]).then(([cuarteles, cuadrillas]) => {
-        setCuartelesDisponibles(cuarteles);
-        setCuadrillasDisponibles(cuadrillas);
-        setListasDe(selectedFincaId);
-      });
+      ])
+        .catch((): [Cuartel[], Cuadrilla[]] => [[], []])
+        .then(([cuarteles, cuadrillas]) => {
+          setCuartelesDisponibles(cuarteles);
+          setCuadrillasDisponibles(cuadrillas);
+          setListasDe(selectedFincaId);
+        });
       setSelectedCuartelId('');
       setSelectedCuadrillaId('');
     } else {

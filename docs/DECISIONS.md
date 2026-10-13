@@ -636,6 +636,9 @@ aparecieron dos fallas reales:
   patrón (`try/catch/finally`): la pantalla sale del estado de carga y la app
   arranca (sin sesión) aunque falle la lectura local. El `catch` evita que el
   error vuelva a salir como promesa sin manejar después del `finally`.
+- Al elegir una finca, la carga de cuarteles y cuadrillas lleva `.catch`: si
+  falla la lectura local quedan las listas vacías y se ve el aviso de
+  catálogos incompletos (M-016), en lugar de un rechazo sin manejar.
 - `updatePendingCount()` lleva `.catch`: si falla, el contador de pendientes
   queda con el último valor. `registerForPush()` ya atrapaba sus errores y
   se marca con `void`.
