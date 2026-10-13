@@ -34,6 +34,8 @@ describe('connectivityMonitor (100% Coverage)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // El automock devuelve undefined; la función real es async.
+    (syncEngine.updatePendingCount as jest.Mock).mockResolvedValue(0);
     useAuthStore.setState({ isAuthenticated: true });
     useCatalogosStore.setState({ catalogosIncompletos: false });
     jest.useFakeTimers();

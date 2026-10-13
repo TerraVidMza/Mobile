@@ -62,7 +62,7 @@ export function useNotificaciones() {
       }
     }
 
-    registerForPush();
+    void registerForPush();
   }, [isAuthenticated]);
 
   return { expoPushToken };

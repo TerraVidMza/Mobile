@@ -61,10 +61,14 @@ export default function NuevoPesajeScreen() {
 
   useEffect(() => {
     async function init() {
-      await loadFromLocalDb();
-      setLoading(false);
+      try {
+        await loadFromLocalDb();
+      } finally {
+        // Aunque falle la lectura local, el formulario no queda en carga eterna.
+        setLoading(false);
+      }
     }
-    init();
+    void init();
   }, [loadFromLocalDb]);
 
   useEffect(() => {
@@ -134,7 +138,7 @@ export default function NuevoPesajeScreen() {
       incrementPending(1);
       // Con señal sube en el momento; sin señal queda pendiente (M-003).
       if (useSyncStore.getState().isConnected) void syncEngine.runSync();
-      await haptics.success();
+      haptics.success();
 
       await avisar(
         'Pesaje guardado',
@@ -142,7 +146,7 @@ export default function NuevoPesajeScreen() {
       );
       router.back();
     } catch {
-      await haptics.error();
+      haptics.error();
       void avisar('Error', 'No se pudo guardar el pesaje en el teléfono.');
     } finally {
       setSaving(false);

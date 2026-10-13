@@ -19,8 +19,9 @@ export function getRetryDelay(attemptIndex: number): number {
     ENV.SYNC_RETRY_DELAYS[attemptIndex] ??
     ENV.SYNC_RETRY_DELAYS[ENV.SYNC_RETRY_DELAYS.length - 1];
 
-  // Jitter entre -10% y +10%
-  const jitterFactor = 0.9 + Math.random() * 0.2;
+  // Jitter entre -10% y +10%. NOSONAR: solo reparte reintentos en el tiempo,
+  // no es un valor de seguridad; no necesita un generador criptográfico.
+  const jitterFactor = 0.9 + Math.random() * 0.2; // NOSONAR
   return Math.round(baseDelay * jitterFactor);
 }
 

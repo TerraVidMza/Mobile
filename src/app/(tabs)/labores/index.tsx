@@ -105,7 +105,7 @@ export default function LaboresScreen() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await haptics.selection();
+    haptics.selection();
     try {
       // 1. Sincroniza pendientes con backend si hay conexión
       await syncEngine.runSync();
@@ -113,9 +113,9 @@ export default function LaboresScreen() {
       await catalogosSyncService.syncAll();
       // 3. Recarga vista local
       await loadData();
-      await haptics.success();
+      haptics.success();
     } catch {
-      await haptics.error();
+      haptics.error();
     } finally {
       setRefreshing(false);
     }
