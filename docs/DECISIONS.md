@@ -538,6 +538,12 @@ hicieron falta:
   íconos salían como cuadros vacíos. Los tests no lo detectan porque el ícono
   está simulado; apareció al mirar el emulador. Se instaló `@expo/vector-icons`
   y se quitó `react-native-vector-icons`.
+- **Barra de estado.** Desde SDK 54 la app se dibuja detrás de la barra de
+  estado también en Android 14 (edge-to-edge). El header de las pestañas se
+  corría solo, pero los avisos de sin conexión y de pendientes quedaban
+  debajo de la hora; Maestro falló en `04-offline-sync` en Android 14 por eso.
+  El layout raíz reserva el margen superior una sola vez y les pasa `top: 0`
+  a las pantallas, y la barra de estado toma el color del tema.
 
 `.npmrc` activa `legacy-peer-deps`: `expo-router` declara
 `@react-navigation/drawer` como dependencia opcional, y su última versión
