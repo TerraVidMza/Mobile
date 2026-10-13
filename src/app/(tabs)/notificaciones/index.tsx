@@ -19,7 +19,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 import { useFocusEffect, useRouter } from 'expo-router';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { notificacionesService } from '../../../services/notificaciones.service';
 import type { Notificacion } from '../../../types/api.types';
 import { rutaDeAccion } from '../../../utils/notificaciones';

@@ -14,6 +14,8 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { PaperProvider, MD3DarkTheme, MD3LightTheme, ActivityIndicator } from 'react-native-paper';
 import { useColorScheme, View, StyleSheet, Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../stores/auth.store';
 import { initConnectivityMonitor } from '../sync/connectivity-monitor';
 import { useNotificaciones } from '../hooks/useNotificaciones';
@@ -166,19 +168,34 @@ export default function RootLayout() {
     };
   }, [restore]);
 
+  // Desde SDK 54 la app se dibuja detrás de la barra de estado también en
+  // Android 14 (edge-to-edge). El margen de arriba se reserva acá, una sola
+  // vez, y las pantallas reciben top 0: así los avisos (sin conexión,
+  // pendientes) no quedan debajo de la hora y el header no lo suma dos veces
+  // (M-018).
+  const insets = useSafeAreaInsets();
+
   return (
     <PaperProvider theme={theme}>
-      <View style={styles.container}>
-        <OfflineBanner />
-        {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        ) : bloqueada ? (
-          <PantallaBloqueo />
-        ) : (
-          <Slot />
-        )}
+      <StatusBar style={theme.dark ? 'light' : 'dark'} />
+      <View
+        style={[
+          styles.container,
+          { paddingTop: insets.top, backgroundColor: theme.colors.background },
+        ]}
+      >
+        <SafeAreaInsetsContext.Provider value={{ ...insets, top: 0 }}>
+          <OfflineBanner />
+          {isLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : bloqueada ? (
+            <PantallaBloqueo />
+          ) : (
+            <Slot />
+          )}
+        </SafeAreaInsetsContext.Provider>
       </View>
     </PaperProvider>
   );

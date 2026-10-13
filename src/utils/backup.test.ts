@@ -9,7 +9,11 @@ import { pesajesRepo } from '../db/repositories/pesajes.repo';
 import { closeDatabase, getDatabase } from '../db/database';
 import { EstadoSync } from '../types/api.types';
 
-const fileSystem = { cacheDirectory: 'file:///cache/', writeAsStringAsync: jest.fn() };
+const archivo = { uri: '', create: jest.fn(), write: jest.fn() };
+const fileSystem = {
+  Paths: { cache: { uri: 'file:///cache/' } },
+  File: jest.fn((dir: { uri: string }, nombre: string) => Object.assign(archivo, { uri: dir.uri + nombre })),
+};
 const sharing = { isAvailableAsync: jest.fn().mockResolvedValue(true), shareAsync: jest.fn() };
 jest.mock('expo-file-system', () => fileSystem, { virtual: true });
 jest.mock('expo-sharing', () => sharing, { virtual: true });
@@ -81,10 +85,9 @@ describe('Respaldo local (M-008)', () => {
     // La base ya está abierta como web: cambiar OS solo afecta al guardado.
     const backup = await compartirRespaldo();
     expect(backup.totalPesajes).toBe(2);
-    expect(fileSystem.writeAsStringAsync).toHaveBeenCalledWith(
-      expect.stringMatching(/^file:\/\/\/cache\/terravid-respaldo-\d{4}-\d{2}-\d{2}\.json$/),
-      expect.stringContaining('"totalPesajes": 2'),
-    );
-    expect(sharing.shareAsync).toHaveBeenCalled();
+    expect(archivo.uri).toMatch(/^file:\/\/\/cache\/terravid-respaldo-\d{4}-\d{2}-\d{2}\.json$/);
+    expect(archivo.create).toHaveBeenCalledWith({ overwrite: true });
+    expect(archivo.write).toHaveBeenCalledWith(expect.stringContaining('"totalPesajes": 2'));
+    expect(sharing.shareAsync).toHaveBeenCalledWith(archivo.uri, expect.anything());
   });
 });

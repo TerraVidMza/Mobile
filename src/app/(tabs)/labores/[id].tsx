@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { laboresRepo } from '../../../db/repositories/labores.repo';
 import { syncEngine } from '../../../sync/sync-engine';
 import { haptics } from '../../../utils/haptics';

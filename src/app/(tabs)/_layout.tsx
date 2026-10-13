@@ -8,7 +8,7 @@
 import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useTheme } from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useSyncStore } from '../../stores/sync.store';
 import { SyncStatusBar } from '../../components/sync/SyncStatusBar';
 import { useAuthStore } from '../../stores/auth.store';
