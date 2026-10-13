@@ -632,8 +632,10 @@ aparecieron dos fallas reales:
 - `haptics.success/error/selection` devuelven `void` y absorben el rechazo
   de `expo-haptics`. Las pantallas los llaman sin `await`, así la vibración
   no demora el guardado ni la navegación.
-- Las cargas iniciales usan `try/finally`: la pantalla sale del estado de
-  carga y la app arranca (sin sesión) aunque falle la lectura local.
+- Los formularios usan el hook `useCargaInicial`, y el layout raíz el mismo
+  patrón (`try/catch/finally`): la pantalla sale del estado de carga y la app
+  arranca (sin sesión) aunque falle la lectura local. El `catch` evita que el
+  error vuelva a salir como promesa sin manejar después del `finally`.
 - `updatePendingCount()` lleva `.catch`: si falla, el contador de pendientes
   queda con el último valor. `registerForPush()` ya atrapaba sus errores y
   se marca con `void`.
@@ -641,8 +643,9 @@ aparecieron dos fallas reales:
   y el `Math.random` del jitter de reintentos (M-003) quedan con `NOSONAR` y
   el motivo al lado, como en el Backend: ninguno es un valor de seguridad.
 
-**Verificación.** `tsc` sin errores y los 189 tests de Jest. El test del
-monitor de conectividad ahora simula `updatePendingCount` como `async`, igual
-que la función real.
+**Verificación.** `tsc` sin errores y 191 tests de Jest. Los dos nuevos
+cubren `useCargaInicial`, incluida la carga que falla. El test del monitor de
+conectividad ahora simula `updatePendingCount` como `async`, igual que la
+función real.
 
 **Estado:** ✅ Implementada.

@@ -29,6 +29,7 @@ import { syncEngine } from '../../../sync/sync-engine';
 import { pesajesRepo } from '../../../db/repositories/pesajes.repo';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
+import { useCargaInicial } from '../../../hooks/useCargaInicial';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, Cuadrilla } from '../../../types/api.types';
 import { avisar } from '../../../utils/dialogos';
@@ -55,21 +56,9 @@ export default function NuevoPesajeScreen() {
   const [cuartelMenuVisible, setCuartelMenuVisible] = useState(false);
   const [cuadrillaMenuVisible, setCuadrillaMenuVisible] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const loading = useCargaInicial(loadFromLocalDb);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  useEffect(() => {
-    async function init() {
-      try {
-        await loadFromLocalDb();
-      } finally {
-        // Aunque falle la lectura local, el formulario no queda en carga eterna.
-        setLoading(false);
-      }
-    }
-    void init();
-  }, [loadFromLocalDb]);
 
   useEffect(() => {
     if (selectedFincaId) {

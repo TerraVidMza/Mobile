@@ -157,6 +157,8 @@ export default function RootLayout() {
     async function init() {
       try {
         await Promise.all([restore(), useThemeStore.getState().restaurar()]);
+      } catch {
+        // Sin sesión ni tema guardados: se sigue con los valores por defecto.
       } finally {
         // Si falla la restauración, la app arranca igual (sin sesión) en vez
         // de quedar trabada en el splash.

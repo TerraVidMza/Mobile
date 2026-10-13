@@ -31,6 +31,7 @@ import { laboresRepo } from '../../../db/repositories/labores.repo';
 import { InsumoSelector } from '../../../components/forms/InsumoSelector';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
+import { useCargaInicial } from '../../../hooks/useCargaInicial';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, DetalleInsumoDto } from '../../../types/api.types';
 import { avisar } from '../../../utils/dialogos';
@@ -60,21 +61,9 @@ export default function NuevaLaborScreen() {
   const [tipoLaborMenuVisible, setTipoLaborMenuVisible] = useState(false);
 
   // Estados de control
-  const [loading, setLoading] = useState(true);
+  const loading = useCargaInicial(loadFromLocalDb);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  useEffect(() => {
-    async function init() {
-      try {
-        await loadFromLocalDb();
-      } finally {
-        // Aunque falle la lectura local, el formulario no queda en carga eterna.
-        setLoading(false);
-      }
-    }
-    void init();
-  }, [loadFromLocalDb]);
 
   // Al cambiar de finca, carga sus cuarteles
   useEffect(() => {
