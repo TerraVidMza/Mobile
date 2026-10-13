@@ -7,6 +7,7 @@
 
 import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useSyncStore } from '../../stores/sync.store';
@@ -18,6 +19,10 @@ export default function TabLayout() {
   const theme = useTheme();
   const pendingCount = useSyncStore((s) => s.pendingCount);
   const user = useAuthStore((s) => s.user);
+  // Edge-to-edge (M-018): la barra de navegación del teléfono se dibuja encima
+  // de la app. Con altura fija, la de pestañas quedaba tapada por los botones
+  // de Android; se suma el margen inferior real (M-020).
+  const { bottom } = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
@@ -29,8 +34,8 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: theme.colors.surface,
             borderTopColor: '#E0E0E0',
-            height: 60,
-            paddingBottom: 8,
+            height: 60 + bottom,
+            paddingBottom: 8 + bottom,
           },
           tabBarLabelStyle: {
             fontSize: 12,

@@ -25,6 +25,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-017 | SonarCloud como analizador estático de la app | ✅ Vigente |
 | M-018 | Expo SDK 57, un SDK a la vez | ✅ Implementada |
 | M-019 | La fuente de íconos se publica con la PWA | ✅ Implementada |
+| M-020 | La barra de pestañas respeta la barra de navegación de Android | ✅ Implementada |
 
 ---
 
@@ -588,3 +589,24 @@ y antes de este puede tener el HTML guardado en su caché HTTP, por la
 cabecera inmutable. El service worker nuevo no lo guarda, pero el navegador
 puede seguir usándolo: en ese caso, borrar los datos del sitio. El margen
 fue de minutos.
+
+---
+
+## M-020 — La barra de pestañas respeta la barra de navegación de Android
+
+**Contexto.** En un teléfono real con navegación de 3 botones, los botones de
+Android tapaban la barra de pestañas. Con edge-to-edge (M-018) la app se
+dibuja también detrás de la barra de navegación, y `tabBarStyle` fijaba
+`height: 60` y `paddingBottom: 8`, lo que reemplaza el cálculo de React
+Navigation que suma ese margen. En los emuladores no se vio porque usaban
+navegación por gestos, cuya barra es fina.
+
+**Decisión.** La barra de pestañas suma el margen inferior real
+(`useSafeAreaInsets().bottom`) a su altura y a su relleno. Las pantallas
+fuera de las pestañas (login, recuperar contraseña, bloqueo) tienen el
+contenido centrado y no se ven afectadas; los botones flotantes van dentro de
+cada pestaña, encima de la barra.
+
+**Verificación.** Emulador Android 17 con navegación de 3 botones
+(`cmd overlay enable com.android.internal.systemui.navbar.threebutton`),
+antes y después del cambio. Conviene sumar ese modo a las corridas de Maestro.
