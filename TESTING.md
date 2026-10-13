@@ -64,6 +64,14 @@ subflujos en `.maestro/subflows/` (login y carga de labor). Se corren a mano
 - Una finca con un cuartel, una cuadrilla, un tipo de labor y un insumo
   cargados desde la Web.
 
+- Probar al menos una vez con la navegación de 3 botones: los emuladores
+  vienen con gestos y ocultan lo que tapa la barra de Android (M-020):
+
+  ```bash
+  adb shell cmd overlay enable com.android.internal.systemui.navbar.threebutton
+  adb shell cmd overlay disable com.android.internal.systemui.navbar.gestural
+  ```
+
 ### Cómo se corren
 
 ```bash
