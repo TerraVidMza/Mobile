@@ -66,8 +66,8 @@ export function initConnectivityMonitor(): () => void {
     }
   });
 
-  // Chequeo inicial
-  syncEngine.updatePendingCount();
+  // Chequeo inicial (si falla la lectura local, el contador queda como estaba)
+  syncEngine.updatePendingCount().catch(() => {});
 
   _unsubscribe = () => {
     netInfoUnsub();

@@ -8,7 +8,9 @@
 
 export const ENV = {
   /** URL base del backend API (sin trailing slash). */
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://10.0.2.2:3000/api',
+  // NOSONAR: el fallback http solo apunta al backend local desde el emulador
+  // Android; los perfiles preview/production de EAS y la PWA definen EXPO_PUBLIC_API_BASE_URL con https.
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://10.0.2.2:3000/api', // NOSONAR
 
   /** Máximo de registros por lote de sincronización (HU-14). */
   MAXIMO_REGISTROS_POR_LOTE: 10,

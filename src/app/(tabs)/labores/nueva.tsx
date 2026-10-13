@@ -31,6 +31,7 @@ import { laboresRepo } from '../../../db/repositories/labores.repo';
 import { InsumoSelector } from '../../../components/forms/InsumoSelector';
 import { hoyLocal, timestampLocal } from '../../../utils/fecha-local';
 import { haptics } from '../../../utils/haptics';
+import { useCargaInicial } from '../../../hooks/useCargaInicial';
 import { EstadoSync } from '../../../types/api.types';
 import type { Cuartel, DetalleInsumoDto } from '../../../types/api.types';
 import { avisar } from '../../../utils/dialogos';
@@ -60,17 +61,9 @@ export default function NuevaLaborScreen() {
   const [tipoLaborMenuVisible, setTipoLaborMenuVisible] = useState(false);
 
   // Estados de control
-  const [loading, setLoading] = useState(true);
+  const loading = useCargaInicial(loadFromLocalDb);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  useEffect(() => {
-    async function init() {
-      await loadFromLocalDb();
-      setLoading(false);
-    }
-    init();
-  }, [loadFromLocalDb]);
 
   // Al cambiar de finca, carga sus cuarteles
   useEffect(() => {
@@ -136,7 +129,7 @@ export default function NuevaLaborScreen() {
       incrementPending(1);
       // Con señal sube en el momento; sin señal queda pendiente (M-003).
       if (useSyncStore.getState().isConnected) void syncEngine.runSync();
-      await haptics.success();
+      haptics.success();
 
       // Con Alert.alert el `router.back()` no corría en la PWA (M-006).
       await avisar(
@@ -145,7 +138,7 @@ export default function NuevaLaborScreen() {
       );
       router.back();
     } catch {
-      await haptics.error();
+      haptics.error();
       void avisar('Error', 'No se pudo guardar el registro en el teléfono.');
     } finally {
       setSaving(false);

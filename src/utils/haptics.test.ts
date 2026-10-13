@@ -28,9 +28,9 @@ describe('haptics utility (100% Coverage)', () => {
     });
 
     it('no debe ejecutar llamadas nativas en web', async () => {
-      await haptics.success();
-      await haptics.error();
-      await haptics.selection();
+      haptics.success();
+      haptics.error();
+      haptics.selection();
       expect(mockNotificationAsync).not.toHaveBeenCalled();
       expect(mockSelectionAsync).not.toHaveBeenCalled();
     });
@@ -42,13 +42,13 @@ describe('haptics utility (100% Coverage)', () => {
     });
 
     it('debe ejecutar notificationAsync para success y error', async () => {
-      await haptics.success();
+      haptics.success();
       expect(mockNotificationAsync).toHaveBeenCalledWith('success');
 
-      await haptics.error();
+      haptics.error();
       expect(mockNotificationAsync).toHaveBeenCalledWith('error');
 
-      await haptics.selection();
+      haptics.selection();
       expect(mockSelectionAsync).toHaveBeenCalled();
     });
 
@@ -56,9 +56,9 @@ describe('haptics utility (100% Coverage)', () => {
       mockNotificationAsync.mockRejectedValueOnce(new Error('Device not supported'));
       mockSelectionAsync.mockRejectedValueOnce(new Error('Device not supported'));
 
-      await expect(haptics.success()).resolves.not.toThrow();
-      await expect(haptics.error()).resolves.not.toThrow();
-      await expect(haptics.selection()).resolves.not.toThrow();
+      expect(() => haptics.success()).not.toThrow();
+      expect(() => haptics.error()).not.toThrow();
+      expect(() => haptics.selection()).not.toThrow();
     });
   });
 });

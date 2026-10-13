@@ -155,13 +155,20 @@ export default function RootLayout() {
     const cleanupNet = initConnectivityMonitor();
 
     async function init() {
-      await Promise.all([restore(), useThemeStore.getState().restaurar()]);
-      setIsMounted(true);
-      if (Platform.OS !== 'web') {
-        await SplashScreen.hideAsync().catch(() => {});
+      try {
+        await Promise.all([restore(), useThemeStore.getState().restaurar()]);
+      } catch {
+        // Sin sesión ni tema guardados: se sigue con los valores por defecto.
+      } finally {
+        // Si falla la restauración, la app arranca igual (sin sesión) en vez
+        // de quedar trabada en el splash.
+        setIsMounted(true);
+        if (Platform.OS !== 'web') {
+          await SplashScreen.hideAsync().catch(() => {});
+        }
       }
     }
-    init();
+    void init();
 
     return () => {
       cleanupNet();

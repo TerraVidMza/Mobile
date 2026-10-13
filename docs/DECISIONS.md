@@ -26,6 +26,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-018 | Expo SDK 57, un SDK a la vez | ✅ Implementada |
 | M-019 | La fuente de íconos se publica con la PWA | ✅ Implementada |
 | M-020 | La barra de pestañas respeta la barra de navegación de Android | ✅ Implementada |
+| M-021 | Sin promesas sueltas: hápticos sin espera y cargas que siempre terminan | ✅ Implementada |
 
 ---
 
@@ -610,3 +611,41 @@ cada pestaña, encima de la barra.
 **Verificación.** Emulador Android 17 con navegación de 3 botones
 (`cmd overlay enable com.android.internal.systemui.navbar.threebutton`),
 antes y después del cambio. Conviene sumar ese modo a las corridas de Maestro.
+
+---
+
+## M-021 — Sin promesas sueltas: hápticos sin espera y cargas que siempre terminan
+
+**Contexto.** SonarCloud (M-017) dejaba la app en C de confiabilidad y de
+seguridad: 29 promesas sin `await` ni `.catch` (regla S9383), un `http` y un
+`Math.random`. Veintidós de las promesas eran llamadas a `haptics.*`, que
+eran `async` aunque nadie necesita esperar una vibración. Al revisar el resto
+aparecieron dos fallas reales:
+
+- En los formularios de labor y pesaje, si `loadFromLocalDb()` fallaba, nunca
+  se llamaba a `setLoading(false)` y la pantalla quedaba cargando.
+- En el layout raíz, si `restore()` fallaba, `isMounted` no pasaba a `true`
+  y la app quedaba trabada en la splash.
+
+**Decisión.**
+
+- `haptics.success/error/selection` devuelven `void` y absorben el rechazo
+  de `expo-haptics`. Las pantallas los llaman sin `await`, así la vibración
+  no demora el guardado ni la navegación.
+- Los formularios usan el hook `useCargaInicial`, y el layout raíz el mismo
+  patrón (`try/catch/finally`): la pantalla sale del estado de carga y la app
+  arranca (sin sesión) aunque falle la lectura local. El `catch` evita que el
+  error vuelva a salir como promesa sin manejar después del `finally`.
+- `updatePendingCount()` lleva `.catch`: si falla, el contador de pendientes
+  queda con el último valor. `registerForPush()` ya atrapaba sus errores y
+  se marca con `void`.
+- El fallback `http://10.0.2.2` de `env.ts` (backend local desde el emulador)
+  y el `Math.random` del jitter de reintentos (M-003) quedan con `NOSONAR` y
+  el motivo al lado, como en el Backend: ninguno es un valor de seguridad.
+
+**Verificación.** `tsc` sin errores y 191 tests de Jest. Los dos nuevos
+cubren `useCargaInicial`, incluida la carga que falla. El test del monitor de
+conectividad ahora simula `updatePendingCount` como `async`, igual que la
+función real.
+
+**Estado:** ✅ Implementada.
