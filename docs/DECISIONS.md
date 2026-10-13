@@ -489,3 +489,20 @@ app.
 
 **Fuera de alcance.** Expo SDK 52 no declara soporte para Android 17; esta
 corrección evita el pedido innecesario, pero no reemplaza actualizar el SDK.
+
+---
+
+## M-017 — SonarCloud como analizador estático de la app
+
+**Contexto:** la app no tenía linter, solo `tsc` en modo estricto, que da 0 errores. La Etapa 6 pide un analizador estático aplicado sobre el repositorio.
+
+**Decisión:** se agrega `.sonarcloud.properties` comentado, en modo *Automatic Analysis*:
+
+- Fuentes: `src`.
+- Tests: Jest, `__mocks__` y los flujos de Maestro.
+
+Sumar oxlint con la configuración de la Web queda como mejora posterior.
+
+**`npm audit` sin `fix`:** el `npm audit fix` sobre el lockfile eliminaba `query-string`, dependencia de `expo-router`. Jest pasaba, pero `expo export --platform web` fallaba. Por eso se descartó: las vulnerabilidades del árbol de Expo y React Native se corrigen con la actualización del SDK, planificada después de la entrega.
+
+**Estado:** ✅ Vigente.
