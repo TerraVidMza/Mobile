@@ -17,7 +17,7 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 
 ## Stack Tecnológico
 
-- **React Native 0.76 / Expo SDK 52**
+- **React Native 0.86 / Expo SDK 57** (React 19.2, TypeScript 6; M-017)
 - **Expo Router**: Navegación file-based con grupos `(auth)` y `(tabs)`
 - **SQLite (`expo-sqlite`)**: Persistencia local offline-first
 - **Zustand**: Gestión de estado global (auth, sync, catálogos)

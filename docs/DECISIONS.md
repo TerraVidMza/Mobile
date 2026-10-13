@@ -22,6 +22,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-013 | Los E2E de Maestro quedan en ejecución manual | ✅ Implementada |
 | M-014 | La PWA se publica en Firebase Hosting, junto a la Web | ✅ Implementada |
 | M-016 | Permiso de ubicación sin colgar el guardado y catálogos incompletos a la vista | ✅ Implementada |
+| M-017 | Expo SDK 57, un SDK a la vez | ✅ Implementada |
 
 ---
 
@@ -488,7 +489,7 @@ app.
   el teléfono, con la indicación de actualizar con señal.
 
 **Fuera de alcance.** Expo SDK 52 no declara soporte para Android 17; esta
-corrección evita el pedido innecesario, pero no reemplaza actualizar el SDK.
+corrección evita el pedido innecesario, pero no reemplaza actualizar el SDK. *Actualización:* el SDK se actualizó en M-017.
 
 ---
 
@@ -506,3 +507,41 @@ Sumar oxlint con la configuración de la Web queda como mejora posterior.
 **`npm audit` sin `fix`:** el `npm audit fix` sobre el lockfile eliminaba `query-string`, dependencia de `expo-router`. Jest pasaba, pero `expo export --platform web` fallaba. Por eso se descartó: las vulnerabilidades del árbol de Expo y React Native se corrigen con la actualización del SDK, planificada después de la entrega.
 
 **Estado:** ✅ Vigente.
+
+---
+
+## M-017 — Expo SDK 57, un SDK a la vez
+
+**Contexto.** La app estaba en Expo SDK 52 (React Native 0.76, React 18), que
+no declara soporte para Android 17. M-016 corrigió el guardado colgado, pero
+cualquier otro módulo nativo podía fallar igual. El último SDK estable es el 57.
+
+**Decisión.** Se subió de a un SDK (53, 54, 55, 56, 57), con un commit por
+salto, typecheck y los 189 tests de Jest en cada uno. Las versiones de cada
+paquete las fija `expo install --check`, no a mano. Cambios de código que
+hicieron falta:
+
+- **SDK 53** (React 19): `expo-notifications` 0.31 reemplaza `shouldShowAlert`
+  por `shouldShowBanner` y `shouldShowList`. Con `react-test-renderer` 19, el
+  test del banner offline renderiza dentro de `act()`.
+- **SDK 54**: `expo-file-system` 19 cambia de API. El respaldo (M-008) usa
+  `File` y `Paths.cache` en lugar de `writeAsStringAsync`, que quedó en
+  `expo-file-system/legacy` y puede desaparecer.
+- **SDK 55 y 56**: sin cambios de código.
+- **SDK 57** (React Native 0.86, TypeScript 6): la splash pasa al plugin
+  `expo-splash-screen` y se quita `newArchEnabled` (la nueva arquitectura es
+  la única desde SDK 55). TypeScript 6 depreca `baseUrl` y ya no incluye
+  todos los `@types` instalados: `tsconfig` declara `jest` y `node`.
+
+`.npmrc` activa `legacy-peer-deps`: `expo-router` declara
+`@react-navigation/drawer` como dependencia opcional, y su última versión
+arrastra `react-native-reanimated`, que pide un React Native más nuevo que el
+del SDK. La app no usa drawer. Sin esto, `npm ci` falla en el CI y en EAS.
+
+**Verificación.** `expo-doctor` 21/21, `expo export --platform web` sin
+errores, y la suite de Maestro sobre una APK `preview` en Android 14 y 17
+(ver la descripción del PR).
+
+**Costo asumido.** Es un cambio grande a días de la entrega. Por eso quedó
+en una rama aparte: si algo falla en un teléfono real, la APK versionCode 5
+(SDK 52 con M-016) sigue siendo la de distribución.
