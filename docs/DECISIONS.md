@@ -532,6 +532,12 @@ hicieron falta:
   `expo-splash-screen` y se quita `newArchEnabled` (la nueva arquitectura es
   la única desde SDK 55). TypeScript 6 depreca `baseUrl` y ya no incluye
   todos los `@types` instalados: `tsconfig` declara `jest` y `node`.
+- **Íconos.** Hasta SDK 52, `expo` traía `@expo/vector-icons` como
+  dependencia; después no. Paper y las pantallas caían en
+  `react-native-vector-icons`, que no empaqueta sus fuentes en el APK, y los
+  íconos salían como cuadros vacíos. Los tests no lo detectan porque el ícono
+  está simulado; apareció al mirar el emulador. Se instaló `@expo/vector-icons`
+  y se quitó `react-native-vector-icons`.
 
 `.npmrc` activa `legacy-peer-deps`: `expo-router` declara
 `@react-navigation/drawer` como dependencia opcional, y su última versión
