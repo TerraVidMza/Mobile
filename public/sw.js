@@ -12,8 +12,13 @@
  *   del usuario).
  *
  * Cambiar VERSION invalida los cachés anteriores al activarse.
+ *
+ * v2 (M-019): un recurso que no estaba publicado volvía como index.html con
+ * 200, y quedaba guardado en lugar del archivo (la fuente de íconos). Ahora
+ * no se guarda HTML bajo una ruta de recurso, y el cambio de versión borra
+ * lo que ya había quedado mal.
  */
-const VERSION = 'terravid-v1';
+const VERSION = 'terravid-v2';
 const SHELL = ['/', '/manifest.json', '/icons/icon-192.png', '/sqljs/sql-wasm-browser.wasm'];
 
 self.addEventListener('install', (event) => {
@@ -56,7 +61,8 @@ self.addEventListener('fetch', (event) => {
         (guardado) =>
           guardado ||
           fetch(request).then((respuesta) => {
-            if (respuesta.ok) {
+            const esHtml = (respuesta.headers.get('content-type') || '').includes('text/html');
+            if (respuesta.ok && !esHtml) {
               const copia = respuesta.clone();
               caches.open(VERSION).then((c) => c.put(request, copia));
             }

@@ -24,6 +24,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-016 | Permiso de ubicación sin colgar el guardado y catálogos incompletos a la vista | ✅ Implementada |
 | M-017 | SonarCloud como analizador estático de la app | ✅ Vigente |
 | M-018 | Expo SDK 57, un SDK a la vez | ✅ Implementada |
+| M-019 | La fuente de íconos se publica con la PWA | ✅ Implementada |
 
 ---
 
@@ -558,3 +559,32 @@ errores, y la suite de Maestro sobre una APK `preview` en Android 14 y 17
 **Costo asumido.** Es un cambio grande a días de la entrega. Por eso quedó
 en una rama aparte: si algo falla en un teléfono real, la APK versionCode 5
 (SDK 52 con M-016) sigue siendo la de distribución.
+
+---
+
+## M-019 — La fuente de íconos se publica con la PWA
+
+**Contexto.** En la PWA los íconos salían como cuadros vacíos. `expo export`
+deja la fuente en `dist/assets/node_modules/@expo/vector-icons/...`, y
+`firebase.json` excluía `**/node_modules/**` al publicar: el archivo nunca
+se subía. Firebase respondía a esa URL con `index.html` (200, `text/html`),
+con la cabecera de un año e inmutable de `/assets/**`, y el service worker
+lo guardaba como si fuera la fuente. Pasaba desde M-014; la app Android no
+se veía afectada porque lleva las fuentes adentro del APK.
+
+**Decisión.**
+
+- `firebase.json` deja de excluir `node_modules`. Dentro de `dist` no hay
+  dependencias, solo recursos que Expo copió con esa ruta.
+- El service worker no guarda una respuesta HTML bajo una ruta de recurso.
+- `VERSION` pasa a `terravid-v2`: al activarse borra los cachés anteriores,
+  donde quedó guardado el HTML en lugar de la fuente.
+
+**Verificación.** Con el emulador de Firebase Hosting y la configuración
+nueva, la fuente vuelve como `font/ttf` y el login muestra los íconos.
+
+**Costo asumido.** Un navegador que abrió la PWA después del deploy de M-018
+y antes de este puede tener el HTML guardado en su caché HTTP, por la
+cabecera inmutable. El service worker nuevo no lo guarda, pero el navegador
+puede seguir usándolo: en ese caso, borrar los datos del sitio. El margen
+fue de minutos.
