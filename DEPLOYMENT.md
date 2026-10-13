@@ -68,6 +68,12 @@ eas build --platform android --profile production
 EAS compila en la nube (el plan gratuito alcanza) y deja un enlace al `.apk`.
 Ese enlace es lo que se comparte con los capataces.
 
+**Después de cada build `production`, commitear `app.json`.** El proyecto usa
+`appVersionSource: "local"`, así que `autoIncrement` sube el `versionCode` en el
+`app.json` de la PC que compila, no en el repo. Si no se commitea, el próximo
+build repite el número y los teléfonos no lo toman como actualización (ver los
+PR de versionCode 4 y 5).
+
 | Perfil | Para qué | API |
 |---|---|---|
 | `development` | Cliente de desarrollo con recarga en caliente | `10.0.2.2:3000` (emulador) |
