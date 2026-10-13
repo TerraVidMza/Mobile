@@ -22,6 +22,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-013 | Los E2E de Maestro quedan en ejecución manual | ✅ Implementada |
 | M-014 | La PWA se publica en Firebase Hosting, junto a la Web | ✅ Implementada |
 | M-016 | Permiso de ubicación sin colgar el guardado y catálogos incompletos a la vista | ✅ Implementada |
+| M-017 | SonarCloud como analizador estático de la app | ✅ Vigente |
 | M-018 | Expo SDK 57, un SDK a la vez | ✅ Implementada |
 
 ---
