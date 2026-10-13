@@ -172,7 +172,7 @@ export default function RootLayout() {
   // Android 14 (edge-to-edge). El margen de arriba se reserva acá, una sola
   // vez, y las pantallas reciben top 0: así los avisos (sin conexión,
   // pendientes) no quedan debajo de la hora y el header no lo suma dos veces
-  // (M-017).
+  // (M-018).
   const insets = useSafeAreaInsets();
 
   return (

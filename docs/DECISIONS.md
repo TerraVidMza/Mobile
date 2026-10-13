@@ -22,7 +22,7 @@ refiere al `docs/DECISIONS.md` del repositorio Backend.
 | M-013 | Los E2E de Maestro quedan en ejecución manual | ✅ Implementada |
 | M-014 | La PWA se publica en Firebase Hosting, junto a la Web | ✅ Implementada |
 | M-016 | Permiso de ubicación sin colgar el guardado y catálogos incompletos a la vista | ✅ Implementada |
-| M-017 | Expo SDK 57, un SDK a la vez | ✅ Implementada |
+| M-018 | Expo SDK 57, un SDK a la vez | ✅ Implementada |
 
 ---
 
@@ -489,7 +489,7 @@ app.
   el teléfono, con la indicación de actualizar con señal.
 
 **Fuera de alcance.** Expo SDK 52 no declara soporte para Android 17; esta
-corrección evita el pedido innecesario, pero no reemplaza actualizar el SDK. *Actualización:* el SDK se actualizó en M-017.
+corrección evita el pedido innecesario, pero no reemplaza actualizar el SDK. *Actualización:* el SDK se actualizó en M-018.
 
 ---
 
@@ -510,7 +510,7 @@ Sumar oxlint con la configuración de la Web queda como mejora posterior.
 
 ---
 
-## M-017 — Expo SDK 57, un SDK a la vez
+## M-018 — Expo SDK 57, un SDK a la vez
 
 **Contexto.** La app estaba en Expo SDK 52 (React Native 0.76, React 18), que
 no declara soporte para Android 17. M-016 corrigió el guardado colgado, pero
