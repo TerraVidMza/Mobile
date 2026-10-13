@@ -68,11 +68,14 @@ export default function NuevaLaborScreen() {
   // Al cambiar de finca, carga sus cuarteles
   useEffect(() => {
     if (selectedFincaId) {
-      getCuartelesByFinca(selectedFincaId).then((cuarteles) => {
-        setCuartelesDisponibles(cuarteles);
-        setCuartelesDe(selectedFincaId);
-        setSelectedCuartelId('');
-      });
+      // Si falla la lectura local queda la lista vacía y el aviso de M-016.
+      void getCuartelesByFinca(selectedFincaId)
+        .catch((): Cuartel[] => [])
+        .then((cuarteles) => {
+          setCuartelesDisponibles(cuarteles);
+          setCuartelesDe(selectedFincaId);
+          setSelectedCuartelId('');
+        });
     } else {
       setCuartelesDisponibles([]);
       setSelectedCuartelId('');

@@ -69,7 +69,9 @@ export default function LaboresScreen() {
 
   useEffect(() => {
     if (selectedFincaId) {
-      getCuartelesByFinca(selectedFincaId).then(setCuartelesDisponibles);
+      void getCuartelesByFinca(selectedFincaId)
+        .catch((): Cuartel[] => [])
+        .then(setCuartelesDisponibles);
       setSelectedCuartelId('');
     } else {
       setCuartelesDisponibles([]);
