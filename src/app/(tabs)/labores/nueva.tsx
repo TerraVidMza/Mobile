@@ -46,6 +46,8 @@ export default function NuevaLaborScreen() {
   // Estados del formulario
   const [selectedFincaId, setSelectedFincaId] = useState<string>('');
   const [cuartelesDisponibles, setCuartelesDisponibles] = useState<Cuartel[]>([]);
+  /** Finca a la que corresponde la lista cargada; evita avisar mientras carga. */
+  const [cuartelesDe, setCuartelesDe] = useState<string>('');
   const [selectedCuartelId, setSelectedCuartelId] = useState<string>('');
   const [selectedTipoLaborId, setSelectedTipoLaborId] = useState<string>('');
   const [fecha, setFecha] = useState<string>(hoyLocal());
@@ -75,6 +77,7 @@ export default function NuevaLaborScreen() {
     if (selectedFincaId) {
       getCuartelesByFinca(selectedFincaId).then((cuarteles) => {
         setCuartelesDisponibles(cuarteles);
+        setCuartelesDe(selectedFincaId);
         setSelectedCuartelId('');
       });
     } else {
@@ -241,6 +244,14 @@ export default function NuevaLaborScreen() {
           ))}
         </Menu>
         {errors.cuartel && <HelperText type="error">{errors.cuartel}</HelperText>}
+        {!!selectedFincaId &&
+          cuartelesDe === selectedFincaId &&
+          cuartelesDisponibles.length === 0 && (
+          <HelperText type="info" testID="aviso-sin-cuarteles">
+            Esta finca no tiene cuarteles en el teléfono. Con señal, deslizá hacia abajo en
+            la lista para actualizar los datos.
+          </HelperText>
+        )}
       </View>
 
       {/* Selector de Tipo de Labor */}
