@@ -11,6 +11,8 @@ module.exports = {
     '^react-native-safe-area-context$': '<rootDir>/__mocks__/react-native-safe-area-context.js',
     '^@expo/vector-icons/(.*)$': '<rootDir>/__mocks__/@expo/vector-icons/MaterialCommunityIcons.js',
     '^@/(.*)$': '<rootDir>/src/$1',
+    // Las capturas del manual (M-022): en los tests alcanza con un identificador.
+    '\\.(jpg|jpeg|png)$': '<rootDir>/__mocks__/archivo.js',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   collectCoverageFrom: [

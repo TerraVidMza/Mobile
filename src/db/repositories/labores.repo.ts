@@ -229,9 +229,10 @@ export const laboresRepo = {
         ...(r.latitud !== null && r.longitud !== null
           ? { latitud: r.latitud, longitud: r.longitud }
           : {}),
+        // El backend lo llama `cantidadUsada` (M-023).
         insumos: insumosRows.map((i) => ({
           insumoId: i.insumo_id,
-          cantidad: i.cantidad,
+          cantidadUsada: i.cantidad,
         })),
       });
     }

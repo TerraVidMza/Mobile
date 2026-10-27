@@ -652,3 +652,33 @@ conectividad ahora simula `updatePendingCount` como `async`, igual que la
 función real.
 
 **Estado:** ✅ Implementada.
+
+---
+
+## M-022 — Manual de la app y sección Ayuda
+
+**Contexto.** La app no tenía ninguna ayuda. El capataz, que es quien más la usa, está en el cuartel y muchas veces sin señal. El Centro de Ayuda de la Web leía artículos de la base, que en producción estaba vacía (D-036 del backend).
+
+**Decisión.**
+
+- Pestaña nueva **Ayuda** con el manual de la app: buscador, secciones desplegables y, al final, **Pedir ayuda**, que envía un ticket a `POST /ayuda/tickets` con la versión de la app. El pedido no se guarda para después, porque es para hablar con alguien: sin conexión, el botón se deshabilita y se avisa.
+- El manual está en `src/manual/contenido.ts`, en Markdown, y viaja dentro del APK, así que se lee sin señal. Lo interpreta `src/manual/markdown.ts`, un subconjunto chico: secciones, subtítulos, párrafos, listas, notas, imágenes y negrita. Una librería de Markdown para React Native sumaba una dependencia al build por cuatro elementos.
+- Una sección `## Título {permiso}` solo se muestra a quien tiene ese permiso.
+- Las capturas están en `src/manual/img/` y se registran en `src/manual/imagenes.ts`, porque Metro necesita un `require` literal. El alto de cada una se calcula con el ancho medido: react-native-web ignora `aspectRatio` en `Image` y la dibujaba con su alto natural. Se regeneran con `scripts/manual/capturas-manual.mjs` (ver `scripts/manual/README.md`).
+- Este manual es la fuente de la parte de campo del manual del Capataz en la Web (W-034 de la Web).
+
+**Verificación.** Tests del parser, del contenido (cada captura nombrada existe y los permisos son conocidos), del componente que lo dibuja y del servicio de tickets.
+
+**Estado:** ✅ Implementada.
+
+---
+
+## M-023 — Los insumos de una labor se enviaban con un campo equivocado
+
+**Contexto.** Al sacar las capturas del manual apareció que **ninguna labor con insumos se sincronizaba**. La app mandaba cada insumo como `{ insumoId, cantidad }`, y el backend espera `{ insumoId, cantidadUsada }` con `forbidNonWhitelisted`. Respondía «insumos.0.property cantidad should not exist» y la labor quedaba pendiente en el teléfono, reintentando para siempre. Las labores sin insumos sí subían. El test de sincronización tenía el contrato equivocado escrito como esperado.
+
+**Decisión.** El tipo de envío pasa a ser `DetalleInsumoEnvioDto` (`cantidadUsada`), espejo del backend. El formulario y SQLite siguen usando `cantidad`, y la traducción se hace en `labores.repo.getPendientes`. Se corrigió el test.
+
+**Efecto en los teléfonos.** Las labores con insumos trabadas siguen pendientes en cada teléfono y se envían solas en cuanto este tiene la versión con la corrección. Pueden fallar después por otro motivo, por ejemplo falta de costo vigente en su fecha, y eso se ve en el detalle de cada registro.
+
+**Estado:** ✅ Implementada.
