@@ -66,7 +66,8 @@ describe('syncLaboresBatch', () => {
       fecha: '2026-10-05',
       cantidad: 1,
       createdAtLocal: '2026-10-05T08:01:00-03:00',
-      insumos: [{ insumoId: 'i-1', cantidad: 1 }],
+      // `cantidadUsada`, como lo valida el backend (M-023).
+      insumos: [{ insumoId: 'i-1', cantidadUsada: 1 }],
     });
 
     const sincronizada = await laboresRepo.getLaborByUuid('l-01');

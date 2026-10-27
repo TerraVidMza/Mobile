@@ -1,7 +1,7 @@
 /**
  * Tab Layout — navegación principal de la app (protegida).
  *
- * 4 tabs: Inicio | Labores | Pesaje | Notificaciones
+ * 5 tabs: Inicio | Labores | Pesaje | Notificaciones | Ayuda
  * Con SyncStatusBar en el header global.
  */
 
@@ -98,6 +98,17 @@ export default function TabLayout() {
             headerTitle: 'Notificaciones',
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="bell-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="ayuda"
+          options={{
+            title: 'Ayuda',
+            tabBarButtonTestID: 'tab-ayuda',
+            headerTitle: 'Ayuda',
+            tabBarIcon: ({ color, size }) => (
+              <MaterialCommunityIcons name="help-circle-outline" size={size} color={color} />
             ),
           }}
         />

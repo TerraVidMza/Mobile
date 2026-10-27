@@ -112,9 +112,20 @@ export interface Cuadrilla {
 
 // ─── Registro de labor (HU-12, HU-13, HU-14) ─────────────────────────────────
 
+/** Un insumo elegido en el formulario y guardado en el teléfono. */
 export interface DetalleInsumoDto {
   insumoId: string;
   cantidad: number;
+}
+
+/**
+ * Espejo de `DetalleInsumoDto` del backend: allá el campo es `cantidadUsada`
+ * (M-023). Se mandaba `cantidad` y el backend rechazaba toda labor con
+ * insumos, que quedaba trabada en el teléfono reintentando.
+ */
+export interface DetalleInsumoEnvioDto {
+  insumoId: string;
+  cantidadUsada: number;
 }
 
 /** Espejo de CreateRegistroLaborDto del backend. */
@@ -124,7 +135,7 @@ export interface CreateRegistroLaborDto {
   tipoLaborId: string;
   fecha: string;           // ISO date, día local (D-009)
   cantidad: number;        // > 0
-  insumos: DetalleInsumoDto[];
+  insumos: DetalleInsumoEnvioDto[];
   createdAtLocal?: string; // ISO 8601 con timezone
   /** Ubicación al registrar, si hubo GPS (D-027). */
   latitud?: number;
