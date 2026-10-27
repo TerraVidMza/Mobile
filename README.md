@@ -42,6 +42,7 @@ App móvil offline-first para uso en campo del ERP agrícola TerraVid: registro 
 | **HU-17** | Historial de labores del día | `(tabs)/labores` | Completa |
 | **HU-24** | Registro de pesaje diario de vendimia | `(tabs)/pesaje/nuevo`, `(tabs)/pesaje` | Completa |
 | **HU-35** | Notificaciones in-app y push FCM | `(tabs)/notificaciones`, `useNotificaciones` | Completa |
+| **HU-36** | Manual de la app (sin señal) y pedido de ayuda (M-022). Capturas: [`scripts/manual/README.md`](scripts/manual/README.md) | `(tabs)/ayuda`, `src/manual` | Completa |
 
 ### Funcionalidades de campo (mobile-v2)
 
