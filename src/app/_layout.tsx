@@ -142,7 +142,7 @@ export default function RootLayout() {
   const theme =
     modo === 'solar'
       ? solarTheme
-      : modo === 'dark' || colorScheme === 'dark'
+      : modo === 'dark' || (modo === 'default' && colorScheme === 'dark')
         ? darkTheme
         : lightTheme;
   const { restore, isLoading, bloqueada } = useAuthStore();

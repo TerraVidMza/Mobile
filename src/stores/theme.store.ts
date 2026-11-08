@@ -7,7 +7,8 @@ import { create } from 'zustand';
 import { MD3LightTheme, MD3DarkTheme, MD3Theme } from 'react-native-paper';
 import { secureStorage } from '../utils/storage';
 
-export type ThemeMode = 'default' | 'dark' | 'solar';
+// 'default' sigue al sistema; 'light' y 'dark' lo fuerzan a mano.
+export type ThemeMode = 'default' | 'light' | 'dark' | 'solar';
 
 const THEME_STORAGE_KEY = 'terravid_theme_mode';
 
@@ -45,7 +46,12 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
   restaurar: async () => {
     const guardado = await secureStorage.getItem(THEME_STORAGE_KEY);
-    if (guardado === 'default' || guardado === 'dark' || guardado === 'solar') {
+    if (
+      guardado === 'default' ||
+      guardado === 'light' ||
+      guardado === 'dark' ||
+      guardado === 'solar'
+    ) {
       set({ mode: guardado });
     }
   },

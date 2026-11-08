@@ -10,12 +10,13 @@
 
 import { useState } from 'react';
 import { View, Image, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, HelperText, useTheme } from 'react-native-paper';
+import { TextInput, Button, HelperText, IconButton, useTheme } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { loginSchema } from '../../utils/validators';
 import { useAuthStore } from '../../stores/auth.store';
+import { useThemeStore } from '../../stores/theme.store';
 
 interface LoginForm {
   email: string;
@@ -24,6 +25,7 @@ interface LoginForm {
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const setMode = useThemeStore((s) => s.setMode);
   const router = useRouter();
   const { login, loginError, clearLoginError } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
@@ -56,6 +58,13 @@ export default function LoginScreen() {
       style={[styles.container, { backgroundColor: theme.colors.surface }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <IconButton
+        testID="boton-tema"
+        icon={theme.dark ? 'white-balance-sunny' : 'weather-night'}
+        accessibilityLabel={theme.dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+        onPress={() => void setMode(theme.dark ? 'light' : 'dark')}
+        style={styles.botonTema}
+      />
       <View style={styles.content}>
         {/* Logo / Branding */}
         <View style={styles.header}>
@@ -169,6 +178,12 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  botonTema: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 1,
   },
   content: {
     flex: 1,
