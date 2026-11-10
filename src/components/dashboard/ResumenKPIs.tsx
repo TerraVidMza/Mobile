@@ -11,7 +11,7 @@
 
 import { useCallback, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card, Text, ProgressBar, useTheme } from 'react-native-paper';
+import { Card, Text, useTheme } from 'react-native-paper';
 import { useFocusEffect } from 'expo-router';
 import { avanceService, type AvanceCosecha } from '../../services/avance.service';
 import { laboresRepo } from '../../db/repositories/labores.repo';
@@ -102,7 +102,20 @@ export function ResumenKPIs() {
             </View>
             {meta !== null ? (
               <>
-                <ProgressBar progress={progreso} color={theme.colors.primary} style={styles.barra} />
+                {/* Barra propia: el ProgressBar de la librería arma en la web un contenedor
+                    de 52 px que sacaba el texto de abajo fuera de la tarjeta. */}
+                <View
+                  accessibilityRole="progressbar"
+                  accessibilityValue={{ min: 0, max: 100, now: Math.round(progreso * 100) }}
+                  style={[styles.barra, { backgroundColor: theme.colors.surfaceVariant }]}
+                >
+                  <View
+                    style={[
+                      styles.barraRelleno,
+                      { width: `${progreso * 100}%`, backgroundColor: theme.colors.primary },
+                    ]}
+                  />
+                </View>
                 <Text variant="bodySmall" style={styles.etiqueta}>
                   {kg(cosechados)} de {kg(meta)}
                   {datos.pendientesKg > 0 ? ` (incluye ${kg(datos.pendientesKg)} sin sincronizar)` : ''}
@@ -132,5 +145,6 @@ const styles = StyleSheet.create({
   valor: { fontWeight: '700' },
   etiqueta: { opacity: 0.75 },
   encabezado: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  barra: { height: 8, borderRadius: 4, marginBottom: 6 },
+  barra: { height: 8, borderRadius: 4, marginBottom: 6, overflow: 'hidden' },
+  barraRelleno: { height: '100%', borderRadius: 4 },
 });
