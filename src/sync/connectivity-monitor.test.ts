@@ -2,6 +2,7 @@
  * Pruebas unitarias para connectivity-monitor.ts (100% Cobertura).
  */
 
+import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { initConnectivityMonitor } from './connectivity-monitor';
 import { syncEngine } from './sync-engine';
@@ -61,6 +62,35 @@ describe('connectivityMonitor (100% Coverage)', () => {
     expect(sameUnsub).toBe(unsubscribe);
 
     unsubscribe();
+  });
+
+  it('al volver a la app con pendientes y conexión, sincroniza (sin esperar un cambio de red)', () => {
+    let cambioDeEstado: (estado: string) => void = () => {};
+    jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, cb: any) => {
+      cambioDeEstado = cb;
+      return { remove: jest.fn() };
+    }) as any);
+    useSyncStore.setState({ isConnected: true, pendingCount: 2 });
+    unsubscribe = initConnectivityMonitor();
+
+    cambioDeEstado('background');
+    expect(syncEngine.runSync).not.toHaveBeenCalled();
+
+    cambioDeEstado('active');
+    expect(syncEngine.runSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('al volver a la app sin pendientes no sincroniza', () => {
+    let cambioDeEstado: (estado: string) => void = () => {};
+    jest.spyOn(AppState, 'addEventListener').mockImplementation(((_: string, cb: any) => {
+      cambioDeEstado = cb;
+      return { remove: jest.fn() };
+    }) as any);
+    useSyncStore.setState({ isConnected: true, pendingCount: 0 });
+    unsubscribe = initConnectivityMonitor();
+
+    cambioDeEstado('active');
+    expect(syncEngine.runSync).not.toHaveBeenCalled();
   });
 
   it('sincroniza al arrancar con conexión y sesión (pendientes de la sesión anterior)', () => {

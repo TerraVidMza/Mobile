@@ -101,6 +101,26 @@ describe('syncEngine (100% Coverage)', () => {
 
     const [, res2] = await Promise.all([promise1, promise2]);
     expect(res2).toEqual({ success: false, totalSynced: 0, errors: 0 });
+    // Deja correr la ronda que se repite al terminar (ver el test siguiente).
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  });
+
+  it('repite la ronda al terminar si alguien pidió sincronizar mientras corría una', async () => {
+    // Pasa cuando se guarda un registro durante una sincronización: ese registro
+    // no estaba en los lotes ya leídos y quedaba esperando al próximo disparador.
+    (laboresRepo.countPendientes as jest.Mock).mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(0), 20)),
+    );
+    const llamadasAntes = (laboresRepo.countPendientes as jest.Mock).mock.calls.length;
+
+    const primera = syncEngine.runSync();
+    await syncEngine.runSync(); // llega con la primera en curso
+    await primera;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Dos rondas completas (cada una cuenta pendientes dos veces: al empezar y al cerrar).
+    const llamadas = (laboresRepo.countPendientes as jest.Mock).mock.calls.length - llamadasAntes;
+    expect(llamadas).toBeGreaterThanOrEqual(2);
   });
 
   describe('reintento automático (M-003)', () => {

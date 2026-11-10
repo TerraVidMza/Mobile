@@ -32,3 +32,32 @@ export const pesajeService = {
     return response.data;
   },
 };
+
+/** Pesaje observado: quedó así porque el remito que lo contenía fue rechazado. */
+export interface PesajeObservado {
+  id: string;
+  fecha: string;
+  kgTotales: number | string;
+  cuadrilla?: { nombre: string };
+  cuartel?: { nombre: string; finca?: { nombre: string } };
+  remito?: { numeroRemito: string; motivoRechazo?: string | null } | null;
+}
+
+/**
+ * Observados y su corrección. A diferencia del alta, **no pasan por la cola
+ * offline**: el pesaje ya existe en el servidor, y corregirlo exige conexión
+ * para que el cambio se aplique sobre el dato real y no sobre una copia vieja.
+ */
+export const pesajeObservadosService = {
+  async listar(): Promise<PesajeObservado[]> {
+    const response = await api.get<PesajeObservado[]>('/pesajes-vendimia/observados');
+    return response.data;
+  },
+
+  async corregir(
+    id: string,
+    cambios: { kgTotales?: number; fecha?: string },
+  ): Promise<void> {
+    await api.patch(`/pesajes-vendimia/${id}`, cambios);
+  },
+};

@@ -13,6 +13,10 @@ export default function PesajeLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="nuevo" options={{ headerShown: true, title: 'Nuevo pesaje' }} />
+      <Stack.Screen
+        name="observados"
+        options={{ headerShown: true, title: 'Pesajes para corregir' }}
+      />
     </Stack>
   );
 }

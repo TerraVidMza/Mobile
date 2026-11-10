@@ -28,6 +28,8 @@ import { ENV } from '../config/env';
 let _isSyncing = false;
 let _reintento: ReturnType<typeof setTimeout> | null = null;
 let _intentosAutomaticos = 0;
+/** Alguien pidió sincronizar mientras ya corría una ronda: se repite al terminar. */
+let _otraRondaPedida = false;
 
 function cancelarReintento(): void {
   if (_reintento) {
@@ -88,6 +90,9 @@ export const syncEngine = {
     opciones: { automatico?: boolean } = {},
   ): Promise<{ success: boolean; totalSynced: number; errors: number }> {
     if (_isSyncing) {
+      // Un registro guardado durante una ronda en curso no entra en ella
+      // (los lotes ya se leyeron): sin esto esperaba hasta el próximo disparador.
+      if (!opciones.automatico) _otraRondaPedida = true;
       return { success: false, totalSynced: 0, errors: 0 };
     }
 
@@ -166,6 +171,12 @@ export const syncEngine = {
       return { success: false, totalSynced, errors: totalErrors + 1 };
     } finally {
       _isSyncing = false;
+      if (_otraRondaPedida) {
+        _otraRondaPedida = false;
+        if (useSyncStore.getState().isConnected) {
+          setTimeout(() => void syncEngine.runSync(), 0);
+        }
+      }
     }
   },
 };
