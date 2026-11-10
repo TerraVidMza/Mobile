@@ -30,19 +30,19 @@ if (Platform.OS !== 'web') {
 
 // ─── TerraVid Theme ──────────────────────────────────────────────────────────
 //
-// Misma paleta de marca que `Web/src/index.css` (tierra/oliva del viñedo),
+// Misma paleta de marca que `Web/src/index.css` (violeta del logo en claro; tierra/oliva en oscuro),
 // mapeada a los roles de color de Material Design 3. Antes esto era un verde
 // bosque genérico sin relación con el resto del sistema.
 
 const terravidColorsLight = {
-  primary: '#5C6B2E',
+  primary: '#8B5BB5',
   onPrimary: '#FFFFFF',
-  primaryContainer: '#A4B560',
-  onPrimaryContainer: '#1F1810',
-  secondary: '#7A6A5A',
+  primaryContainer: '#E6D8F2',
+  onPrimaryContainer: '#2F1A52',
+  secondary: '#5F6368',
   onSecondary: '#FFFFFF',
-  secondaryContainer: '#F5EFE0',
-  onSecondaryContainer: '#1F1810',
+  secondaryContainer: '#F1E9F8',
+  onSecondaryContainer: '#2F1A52',
   tertiary: '#D35400',
   onTertiary: '#FFFFFF',
   tertiaryContainer: '#FFE0B2',
@@ -50,12 +50,12 @@ const terravidColorsLight = {
   onError: '#FFFFFF',
   errorContainer: '#F5D6D1',
   surface: '#FFFFFF',
-  surfaceVariant: '#F5EFE0',
-  onSurface: '#1F1810',
-  onSurfaceVariant: '#7A6A5A',
-  outline: '#D1CECC',
-  background: '#FAF6EE',
-  onBackground: '#1F1810',
+  surfaceVariant: '#F1F3F4',
+  onSurface: '#2F1A52',
+  onSurfaceVariant: '#5F6368',
+  outline: '#CFC8D6',
+  background: '#F8F9FA',
+  onBackground: '#2F1A52',
 };
 
 const terravidColorsDark = {
@@ -142,7 +142,7 @@ export default function RootLayout() {
   const theme =
     modo === 'solar'
       ? solarTheme
-      : modo === 'dark' || colorScheme === 'dark'
+      : modo === 'dark' || (modo === 'default' && colorScheme === 'dark')
         ? darkTheme
         : lightTheme;
   const { restore, isLoading, bloqueada } = useAuthStore();

@@ -9,13 +9,14 @@
  */
 
 import { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { TextInput, Button, Text, HelperText, useTheme } from 'react-native-paper';
+import { View, Image, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { TextInput, Button, HelperText, IconButton, useTheme } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { loginSchema } from '../../utils/validators';
 import { useAuthStore } from '../../stores/auth.store';
+import { useThemeStore } from '../../stores/theme.store';
 
 interface LoginForm {
   email: string;
@@ -24,6 +25,7 @@ interface LoginForm {
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const setMode = useThemeStore((s) => s.setMode);
   const router = useRouter();
   const { login, loginError, clearLoginError } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
@@ -56,15 +58,24 @@ export default function LoginScreen() {
       style={[styles.container, { backgroundColor: theme.colors.surface }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <IconButton
+        testID="boton-tema"
+        icon={theme.dark ? 'white-balance-sunny' : 'weather-night'}
+        accessibilityLabel={theme.dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+        onPress={() => void setMode(theme.dark ? 'light' : 'dark')}
+        style={styles.botonTema}
+      />
       <View style={styles.content}>
         {/* Logo / Branding */}
         <View style={styles.header}>
-          <Text variant="displaySmall" style={[styles.title, { color: theme.colors.primary }]}>
-            TerraVid
-          </Text>
-          <Text variant="bodyLarge" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-            Gestión inteligente de viñedos
-          </Text>
+          {/* El logo ya trae el nombre y el lema escritos; en oscuro va sobre
+              un panel blanco porque sus letras son violeta oscuro. */}
+          <Image
+            source={require('../../../assets/logo-completo.png')}
+            accessibilityLabel="TerraVid"
+            resizeMode="contain"
+            style={[styles.logo, theme.dark && styles.logoOscuro]}
+          />
         </View>
 
         {/* Formulario */}
@@ -168,6 +179,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  botonTema: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 1,
+  },
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -175,14 +192,16 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 32,
   },
-  title: {
-    fontWeight: '700',
-    letterSpacing: -0.5,
+  logo: {
+    width: 220,
+    height: 195,
   },
-  subtitle: {
-    marginTop: 8,
+  logoOscuro: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
   },
   form: {
     gap: 4,

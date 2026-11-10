@@ -17,6 +17,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { pesajesRepo } from '../../../db/repositories/pesajes.repo';
 import { syncEngine } from '../../../sync/sync-engine';
+import { pesajeObservadosService } from '../../../services/pesaje.service';
 import { EstadoSyncChip } from '../../../components/sync/EstadoSyncChip';
 import { catalogosSyncService } from '../../../services/catalogos-sync.service';
 import { hoyLocal } from '../../../utils/fecha-local';
@@ -37,8 +38,15 @@ export default function PesajesScreen() {
   const [resumenCuadrillas, setResumenCuadrillas] = useState<ResumenCuadrilla[]>([]);
   const [filtro, setFiltro] = useState<'hoy' | 'pendientes' | 'cuadrillas'>('hoy');
   const [refreshing, setRefreshing] = useState(false);
+  const [observados, setObservados] = useState(0);
 
   const loadData = useCallback(async () => {
+    // Sin conexión no hay aviso, y no es un error: los observados viven en el
+    // servidor y se enteran cuando vuelve la señal.
+    pesajeObservadosService
+      .listar()
+      .then((lista) => setObservados(lista.length))
+      .catch(() => setObservados(0));
     try {
       const [items, resumen] = await Promise.all([
         pesajesRepo.getPesajesByFecha(hoyLocal()),
@@ -84,6 +92,26 @@ export default function PesajesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      {/* Pesajes que volvieron por un remito rechazado */}
+      {observados > 0 && (
+        <Card
+          style={[styles.summaryCard, { backgroundColor: theme.colors.errorContainer }]}
+          onPress={() => {
+            haptics.selection();
+            router.push('/(tabs)/pesaje/observados');
+          }}
+        >
+          <Card.Content style={styles.summaryContent}>
+            <Text variant="titleSmall" style={{ color: theme.colors.onErrorContainer }}>
+              {observados} pesaje{observados === 1 ? '' : 's'} para corregir
+            </Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onErrorContainer }}>
+              Un remito fue rechazado. Tocá para revisarlos.
+            </Text>
+          </Card.Content>
+        </Card>
+      )}
+
       {/* Selector de filtro */}
       <View style={styles.filterContainer}>
         <SegmentedButtons

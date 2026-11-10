@@ -5,7 +5,7 @@
  * Con SyncStatusBar en el header global.
  */
 
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, type ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
@@ -14,6 +14,39 @@ import { useSyncStore } from '../../stores/sync.store';
 import { SyncStatusBar } from '../../components/sync/SyncStatusBar';
 import { useAuthStore } from '../../stores/auth.store';
 import { puede } from '../../utils/permisos';
+
+type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+
+/**
+ * Ícono de pestaña. La pestaña activa se resalta con una "píldora" de fondo
+ * (violeta suave en claro, el tono de marca en oscuro) y el ícono relleno,
+ * para que el capataz vea de un vistazo dónde está parado.
+ */
+function IconoPestania({
+  nombre,
+  nombreActivo,
+  focused,
+  color,
+  size,
+}: {
+  nombre: IconName;
+  nombreActivo: IconName;
+  focused: boolean;
+  color: ColorValue;
+  size: number;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        styles.pildora,
+        focused && { backgroundColor: theme.colors.primaryContainer },
+      ]}
+    >
+      <MaterialCommunityIcons name={focused ? nombreActivo : nombre} size={size} color={color} />
+    </View>
+  );
+}
 
 export default function TabLayout() {
   const theme = useTheme();
@@ -29,7 +62,11 @@ export default function TabLayout() {
       <SyncStatusBar />
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: theme.colors.primary,
+          // Claro: violeta profundo sobre la píldora lila. Oscuro: el tono de
+          // marca (oliva) sobre su contenedor.
+          tabBarActiveTintColor: theme.dark
+            ? theme.colors.primary
+            : theme.colors.onPrimaryContainer,
           tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
           tabBarStyle: {
             backgroundColor: theme.colors.surface,
@@ -41,13 +78,13 @@ export default function TabLayout() {
             fontSize: 12,
             fontWeight: '600',
           },
-          // Mismo marrón oscuro que el sidebar del Web (`--sidebar` en
+          // Mismo tono que el sidebar del Web (`--sidebar` en
           // index.css): un olivo saturado a todo el ancho quedaba muy
           // chillón como barra superior.
           headerStyle: {
-            backgroundColor: theme.dark ? '#17110C' : '#3E2B1F',
+            backgroundColor: theme.dark ? '#17110C' : '#4A3566',
           },
-          headerTintColor: '#F5EFE0',
+          headerTintColor: theme.dark ? '#F5EFE0' : '#F8F9FA',
           headerTitleStyle: {
             fontWeight: '700',
           },
@@ -59,8 +96,8 @@ export default function TabLayout() {
             title: 'Inicio',
             tabBarButtonTestID: 'tab-inicio',
             headerTitle: 'TerraVid',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="home-outline" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <IconoPestania nombre="home-outline" nombreActivo="home" focused={focused} color={color} size={size} />
             ),
           }}
         />
@@ -70,8 +107,8 @@ export default function TabLayout() {
             title: 'Labores',
             tabBarButtonTestID: 'tab-labores',
             headerTitle: 'Labores',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="clipboard-text-outline" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <IconoPestania nombre="clipboard-text-outline" nombreActivo="clipboard-text" focused={focused} color={color} size={size} />
             ),
             tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
             // Sin el permiso la pestaña no se muestra (M-005).
@@ -85,8 +122,8 @@ export default function TabLayout() {
             tabBarButtonTestID: 'tab-pesaje',
             headerTitle: 'Pesaje de vendimia',
             href: puede(user, 'pesajesRegistro') ? undefined : null,
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="scale" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <IconoPestania nombre="scale" nombreActivo="scale" focused={focused} color={color} size={size} />
             ),
           }}
         />
@@ -96,8 +133,8 @@ export default function TabLayout() {
             title: 'Avisos',
             tabBarButtonTestID: 'tab-avisos',
             headerTitle: 'Notificaciones',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="bell-outline" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <IconoPestania nombre="bell-outline" nombreActivo="bell" focused={focused} color={color} size={size} />
             ),
           }}
         />
@@ -107,8 +144,8 @@ export default function TabLayout() {
             title: 'Ayuda',
             tabBarButtonTestID: 'tab-ayuda',
             headerTitle: 'Ayuda',
-            tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="help-circle-outline" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <IconoPestania nombre="help-circle-outline" nombreActivo="help-circle" focused={focused} color={color} size={size} />
             ),
           }}
         />
@@ -120,5 +157,12 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  pildora: {
+    width: 56,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
